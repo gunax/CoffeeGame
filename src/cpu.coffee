@@ -1,19 +1,19 @@
 class register
   #8 8-bit registers, 2 16-bit registers SP and PC
-  A = 0
-  B = 0
-  C = 0
-  D = 0
-  E = 0
-  F = 0
-  H = 0
-  L = 0
-  SP = 0 #16-bit
-  PC = 0 #16-bit
+  A: 0
+  B: 0
+  C: 0
+  D: 0
+  E: 0
+  F: 0
+  H: 0
+  L: 0
+  SP: 0 #16-bit
+  PC: 0 #16-bit
 
 class clock
-  m = 0
-  t = 0
+  m: 0
+  t: 0
 
 class MMU
   read8: (addr) ->
