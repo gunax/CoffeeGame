@@ -5,6 +5,7 @@ appFiles  = [
   # omit src/ and .coffee to make the below lines a little shorter
   'screen'
   'cpu'
+  'rom'
 ]
 
 task 'build', 'Build single application file from source files', ->
