@@ -6,6 +6,7 @@ appFiles  = [
   'screen'
   'cpu'
   'rom'
+  'gameboy'
 ]
 
 task 'build', 'Build single application file from source files', ->

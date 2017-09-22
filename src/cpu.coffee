@@ -34,10 +34,3 @@ class CPU
     @register.A  = @register.B  = @register.C  = @register.D  =
     @register.E  = @register.F  = @register.H  = @register.L  =
     @register.SP  = @register.PC  = 0
-
-cpu = new CPU
-cpu.register.B = 5
-console.log(cpu.register.B)
-cpu.resetcpu()
-console.log(cpu.register.B)
-console.log(cpu.MMU.read8(5))
