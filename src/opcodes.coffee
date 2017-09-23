@@ -1,0 +1,5 @@
+opcodes = [
+  NOP = () -> ,
+  LDBCnn = () -> ,
+  LDBCmA = () ->
+]
