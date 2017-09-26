@@ -75,7 +75,7 @@ class MMU
   write16: (addr, value) ->
     #TODO = implement
 
-class CPU
+window.CPU = class CPU
   constructor: () ->
     @register = new register
     @clock = new clock
