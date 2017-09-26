@@ -1,5 +1,6 @@
 opcodes = [
-  NOP = () -> ,
+  NOP = (cpu) ->
+    ,
   LDBCnn = () -> ,
   LDBCmA = () ->
 ]

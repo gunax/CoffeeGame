@@ -8,10 +8,13 @@ class ROM
     parseInt("0x"+s)
 
   size: () ->
-    @data.length/2
+    @data.length
 
   getHexString: (p) ->
-    @data[p*2..p*2+1]
+    @data[p]
 
-  read: (p) =>
+  read8: (p) =>
     @convertToHex(@getHexString(p))
+
+  read16: (p) =>
+    16*@read8(p) + @read8(p+1)

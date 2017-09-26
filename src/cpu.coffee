@@ -1,3 +1,6 @@
+zeroes = (n) ->
+  return (0 for i in [1..n])
+
 class register
   #8 8-bit registers, 2 16-bit registers SP and PC
   A: 0
@@ -16,23 +19,32 @@ class clock
   t: 0
 
 class MMU
+
   constructor: (reg) ->
     @reg = reg
-  @_inbios: true
-  @_bios: []
-  @_rom: []
-  @_wram: []
-  @_eram: []
-  @_zram: []
+    @_inbios = true
+    @_bios = zeroes(0xff)
+    @_rom = new ROM(romHexData)
+    @_wram = zeroes(0xA000 - 0x8000)
+    @_eram = zeroes(0xC000 - 0xA000)
+    @_zram = zeroes(0xFF80 - 0xFF00)
 
   read8: (addr, value = 0, toWrite = false) ->
     #ROM or 256-byte bios
     if 0 <= addr < 0x8000
+      #BIOS
       if addr < 0x0100 and @_inbios
+        #dont permit writing to bios
         return @_bios[addr]
-      else if @reg.PC == 0x0100
+      else if @reg.PC >= 0x0100
         @_inbios = false
-        return @_rom[addr]
+        #dont permit writing to ROM
+        return @_rom.read8(addr)
+
+      #ROM
+      else
+        #dont permit writing to rom
+        return @_rom.read8(addr)
 
     #VRAM
     else if 0x8000 <= addr < 0xA000
@@ -41,10 +53,12 @@ class MMU
 
     #external RAM
     else if 0xA000 <= addr < 0xC000
-      return @_wram[addr & 0x1fff]
+      @_eram[addr & 0x1fff] = value if toWrite
+      return @_eram[addr & 0x1fff]
 
     #working RAM
     else if 0xC000 <= addr < 0xFE00
+      @_wram[addr & 0x1fff] = value if toWrite
       return @_wram[addr & 0x1fff]
 
     #Graphics memory
@@ -57,23 +71,24 @@ class MMU
 
     #zero page
     else if 0xFF00 <= addr < 0xFF80
+      @_zram[addr & 0x7f] = value if toWrite
       return @_zram[addr & 0x7f]
 
     #IO mapped
     else if 0xFF80 <= addr < 0xFFFF
       return 0 #TODO: implement IO mapped ram
 
-    else
-      console.log("tried to access out of bounds memory")
-      return 0
-
   read16: (addr) ->
     return @read8(addr) + (@read8(addr) << 8)
 
   write8: (addr, value) ->
-    #TODO = implement
+    @read8(addr, value, true)
+
   write16: (addr, value) ->
-    #TODO = implement
+    a = (value & 0xFF00)/16
+    b = value & 0x00FF
+    write8(addr, a, true)
+    write8(addr+1, b, true)
 
 window.CPU = class CPU
   constructor: () ->
