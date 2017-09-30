@@ -1,12 +1,11 @@
 class gameboy
   constructor: () ->
     @cpu = new CPU
-    @rom = new ROM romHexData
     @screen = new screen
   step: () =>
-    op = @rom.read(@cpu.register.PC)
-    @cpu.register.PC++
-    console.log(op)
+    op = @cpu.MMU.read8(@cpu.register.PC)
+    opcodes[op](@cpu)
+    console.log(@cpu.register.PC)
 
 gb = new gameboy
 

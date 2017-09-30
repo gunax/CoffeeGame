@@ -13,6 +13,31 @@ class register
   L: 0
   SP: 0 #16-bit
   PC: 0 #16-bit
+  flag:
+    Z: 0
+    N: 0
+    H: 0
+    C: 0
+
+  #write 16-bit n to register BC
+  writeBC: (n) ->
+    @B = n >> 8
+    @C = n & 0x00FF
+    n
+  readBC: () ->
+    (@B << 8) + @C
+  writeDE: (n) ->
+    @D = n >> 8
+    @D = n & 0x00FF
+    n
+  readDE: () ->
+    (@D << 8) + @E
+  writeHL: (n) ->
+    @H = n >> 8
+    @L = n & 0x00FF
+    n
+  readHL: () ->
+    (@H << 8) + @L
 
 class clock
   m: 0
@@ -79,16 +104,15 @@ class MMU
       return 0 #TODO: implement IO mapped ram
 
   read16: (addr) ->
-    return @read8(addr) + (@read8(addr) << 8)
+    return @read8(addr) + (@read8(addr+1) << 8)
 
   write8: (addr, value) ->
     @read8(addr, value, true)
 
   write16: (addr, value) ->
-    a = (value & 0xFF00)/16
-    b = value & 0x00FF
-    write8(addr, a, true)
-    write8(addr+1, b, true)
+    @write8(addr, value && 0xFF, true)
+    @write8(addr+1, (value && 0xFF00) >> 8, true)
+    return value
 
 window.CPU = class CPU
   constructor: () ->
