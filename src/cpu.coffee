@@ -12,7 +12,7 @@ class register
   H: 0
   L: 0
   SP: 0 #16-bit
-  PC: 0 #16-bit
+  PC: 0x100 #16-bit
   flag:
     Z: 0
     N: 0

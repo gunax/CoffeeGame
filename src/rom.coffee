@@ -13,8 +13,8 @@ class ROM
   getHexString: (p) ->
     @data[p]
 
-  read8: (p) =>
+  readChar: (p) =>
     @convertToHex(@getHexString(p))
 
-  read16: (p) =>
-    16*@read8(p) + @read8(p+1)
+  read8: (p) =>
+    16*@readChar(2*p) + @readChar(2*p+1)

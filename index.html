@@ -1,16 +1,36 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <link rel="stylesheet" type="text/css" href="emuStyle.css">
     <title>Gameboy</title>
 </head>
 <body>
   <div>
-    <canvas id="gbScreen" width="160" height="144" style="border:4px solid #000000; margin:8px"></canvas>
-    <div id="debug" style="width:300px; height:200px; background-color:#bcfffa; margin:8px">
+    <canvas id="gbScreen"></canvas>
+    <div id="debug">
+      <ul id="reg_list">
+        Registers
+        <li>A: <span id="A_reg"></span></li>
+        <li>B: <span id="B_reg"></span></li>
+        <li>C: <span id="C_reg"></span></li>
+        <li>D: <span id="D_reg"></span></li>
+        <li>E: <span id="E_reg"></span></li>
+        <li>F: <span id="F_reg"></span></li>
+        <li>H: <span id="H_reg"></span></li>
+        <li>L: <span id="L_reg"></span></li>
+        <li>SP: <span id="SP_reg"></span></li>
+        <li>PC: <span id="PC_reg"></span></li>
+      </ul>
+      <ul id="flag_list">
+        Flags
+        <li>Z: <span id="Z_flag"></span></li>
+        <li>N: <span id="N_flag"></span></li>
+        <li>H: <span id="H_flag"></span></li>
+        <li>C: <span id="C_flag"></span></li>
     </div>
   </div>
 <div>
-  <button id="stepButton" style="width: 100px; height: 40px; font-size: 20px; margin:8px">Step</button>
+  <button id="stepButton">Step</button>
 </div>
 </body>
   <script type="text/javascript" src="lib/gbemu.js"></script>
