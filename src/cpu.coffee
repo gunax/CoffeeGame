@@ -3,36 +3,51 @@ zeroes = (n) ->
 
 class register
   #8 8-bit registers, 2 16-bit registers SP and PC
-  A: 0
-  B: 0
-  C: 0
-  D: 0
-  E: 0
-  F: 0
-  H: 0
-  L: 0
-  SP: 0 #16-bit
-  PC: 0x100 #16-bit
-  flag:
-    Z: 0
-    N: 0
-    H: 0
-    C: 0
+  A: 0x01
+  B: 0x00
+  C: 0x13
+  D: 0x00
+  E: 0xD8
+  F: 0xB0
+  H: 0x01
+  L: 0x4D
+  SP: 0xFFFE #16-bit
+  PC: 0x0100 #16-bit
 
+  Z_flag: () ->
+    @F >> 7
+  N_flag: () ->
+    (@F & 0x40) >> 6
+  H_flag: () ->
+    (@F & 0x20) >> 5
+  C_flag: ()->
+    (@F & 0x10) >> 4
+
+  #write 16-bit n to register AF
+  writeAF: (n) ->
+    n = n && 0xFFFF
+    @A = n >> 8
+    @F = n & 0x00FF
+    n
+  readAF: () ->
+    (@A << 8) + @F
   #write 16-bit n to register BC
   writeBC: (n) ->
+    n = n && 0xFFFF
     @B = n >> 8
     @C = n & 0x00FF
     n
   readBC: () ->
     (@B << 8) + @C
   writeDE: (n) ->
+    n = n && 0xFFFF
     @D = n >> 8
     @D = n & 0x00FF
     n
   readDE: () ->
     (@D << 8) + @E
   writeHL: (n) ->
+    n = n && 0xFFFF
     @H = n >> 8
     @L = n & 0x00FF
     n

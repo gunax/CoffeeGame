@@ -36,6 +36,7 @@ opcodes = [
     cpu.register.PC += 1
     cpu.clock.m += 1
     cpu.clock.t += 4
+    #TODO: set flags on these
 
   #Decrement B
   DEC_B = (cpu) ->
@@ -82,10 +83,13 @@ opcodes = [
  	OPCODE_13 = (cpu) ->
  		cpu.register.PC++
  		console.log("13 unimplemented opcode")
-	#14
- 	OPCODE_14 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("14 unimplemented opcode")
+	#14 load 8-bit immediate into C
+  OPCODE_14 = (cpu) ->
+    n = cpu.MMU.read8(cpu.register.PC+1)
+    cpu.register.C = n
+    cpu.register.PC += 2
+    cpu.clock.m += 2
+    cpu.clock.t += 8
 	#15
  	OPCODE_15 = (cpu) ->
  		cpu.register.PC++
@@ -154,14 +158,16 @@ opcodes = [
  	OPCODE_31 = (cpu) ->
  		cpu.register.PC++
  		console.log("31 unimplemented opcode")
-	#32
- 	OPCODE_32 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("32 unimplemented opcode")
-	#33
- 	OPCODE_33 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("33 unimplemented opcode")
+	#0x20 relative jump by signed immediate
+ 	JR_NZn = (cpu) ->
+
+	#0x21 load 16-bit immediate into HL
+ 	LDHLnn = (cpu) ->
+    cpu.register.L = cpu.MMU.read8(cpu.register.PC+1)
+    cpu.register.H = cpu.MMU.read8(cpu.register.PC+2)
+    cpu.register.PC += 3
+    cpu.clock.m += 3
+    cpu.clock.t += 12
 	#34
  	OPCODE_34 = (cpu) ->
  		cpu.register.PC++
@@ -226,10 +232,14 @@ opcodes = [
  	OPCODE_49 = (cpu) ->
  		cpu.register.PC++
  		console.log("49 unimplemented opcode")
-	#50
- 	OPCODE_50 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("50 unimplemented opcode")
+	#0x32 Load A into (HL), dec HL
+ 	LDHLaDEC = (cpu) ->
+    HL = cpu.register.readHL()
+    cpu.MMU.write8(HL, cpu.register.A)
+    cpu.register.writeHL(HL-1)
+    cpu.register.PC += 1
+    cpu.clock.m += 1
+    cpu.clock.t += 8
 	#51
  	OPCODE_51 = (cpu) ->
  		cpu.register.PC++
@@ -726,10 +736,16 @@ opcodes = [
  	OPCODE_174 = (cpu) ->
  		cpu.register.PC++
  		console.log("174 unimplemented opcode")
-	#175
- 	OPCODE_175 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("175 unimplemented opcode")
+
+	#175 XOR A against A
+  OPCODE_175 = (cpu) ->
+    r = cpu.register.A^cpu.register.A
+    cpu.register.A = r
+    cpu.register.F = if r then 0 else 0x80
+    cpu.register.PC++
+    cpu.clock.m += 1
+    cpu.clock.t += 4
+
 	#176
  	OPCODE_176 = (cpu) ->
  		cpu.register.PC++
@@ -839,13 +855,14 @@ opcodes = [
  		cpu.register.PC++
  		console.log("201 unimplemented opcode")
 	#202
- 	OPCODE_202 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("202 unimplemented opcode")
+  OPCODE_202 = (cpu) ->
+    cpu.register.PC++
+    console.log("202 unimplemented opcode")
 	#203
  	OPCODE_203 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("203 unimplemented opcode")
+    cpu.register.PC++
+    console.log("203 unimplemented opcode")
+    console.log("THIS IS THE CB PREFIX")
 	#204
  	OPCODE_204 = (cpu) ->
  		cpu.register.PC++

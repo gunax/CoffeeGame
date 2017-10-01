@@ -9,24 +9,30 @@ class gameboy
     @refreshDebug()
 
   refreshDebug: () ->
-    document.getElementById('A_reg').innerHTML = @cpu.register.A.toString(16)
-    document.getElementById('B_reg').innerHTML = @cpu.register.B.toString(16)
-    document.getElementById('C_reg').innerHTML = @cpu.register.C.toString(16)
-    document.getElementById('D_reg').innerHTML = @cpu.register.D.toString(16)
-    document.getElementById('E_reg').innerHTML = @cpu.register.E.toString(16)
-    document.getElementById('F_reg').innerHTML = @cpu.register.F.toString(16)
-    document.getElementById('H_reg').innerHTML = @cpu.register.H.toString(16)
-    document.getElementById('L_reg').innerHTML = @cpu.register.L.toString(16)
-    document.getElementById('SP_reg').innerHTML = @cpu.register.SP.toString(16)
-    document.getElementById('PC_reg').innerHTML = @cpu.register.PC.toString(16)
+    AF = numFormat(@cpu.register.readAF())
+    BC = numFormat(@cpu.register.readBC())
+    DE = numFormat(@cpu.register.readDE())
+    HL = numFormat(@cpu.register.readHL())
+    SP = numFormat(@cpu.register.SP)
+    PC = numFormat(@cpu.register.PC)
+    document.getElementById('AF_reg').innerHTML = AF
+    document.getElementById('BC_reg').innerHTML = BC
+    document.getElementById('DE_reg').innerHTML = DE
+    document.getElementById('HL_reg').innerHTML = HL
+    document.getElementById('SP_reg').innerHTML = SP
+    document.getElementById('PC_reg').innerHTML = PC
     #flags
-    document.getElementById('Z_flag').innerHTML = @cpu.register.flag.Z
-    document.getElementById('H_flag').innerHTML = @cpu.register.flag.H
-    document.getElementById('C_flag').innerHTML = @cpu.register.flag.C
-    document.getElementById('N_flag').innerHTML = @cpu.register.flag.N
+    document.getElementById('Z_flag').innerHTML = @cpu.register.Z_flag()
+    document.getElementById('N_flag').innerHTML = @cpu.register.N_flag()
+    document.getElementById('H_flag').innerHTML = @cpu.register.H_flag()
+    document.getElementById('C_flag').innerHTML = @cpu.register.C_flag()
 
 
 gb = new gameboy
+
+numFormat = (num) ->
+  pad = '0000'+num.toString(16)
+  (pad.slice -4).toUpperCase()
 
 onLoad = () ->
   button = document.getElementById 'stepButton'
