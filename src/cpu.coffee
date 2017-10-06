@@ -3,60 +3,69 @@ zeroes = (n) ->
 
 class register
   #8 8-bit registers, 2 16-bit registers SP and PC
-  A: 0x01
-  B: 0x00
-  C: 0x13
-  D: 0x00
-  E: 0xD8
-  F: 0xB0
-  H: 0x01
-  L: 0x4D
-  SP: 0xFFFE #16-bit
-  PC: 0x0100 #16-bit
+  'A': 0x01
+  'B': 0x00
+  'C': 0x13
+  'D': 0x00
+  'E': 0xD8
+  'F': 0xB0
+  'H': 0x01
+  'L': 0x4D
+  'SP': 0xFFFE #16-bit
+  'PC': 0x0100 #16-bit
 
   Z_flag: () ->
-    @F >> 7
+    (this['F'] & 0x80) >> 7
   N_flag: () ->
-    (@F & 0x40) >> 6
+    (this['F'] & 0x40) >> 6
   H_flag: () ->
-    (@F & 0x20) >> 5
-  C_flag: ()->
-    (@F & 0x10) >> 4
+    (this['F'] & 0x20) >> 5
+  C_flag: () ->
+    (this['F'] & 0x10) >> 4
+
+  #Set flag if n is true, else zero flag
+  set_Z_flag: (n) ->
+    if n then this['F'] |= 0x80 else this['F'] &= 0x7f
+  set_N_flag: (n) ->
+    if n then this['F'] |= 0x40 else this['F'] &= 0x3f
+  set_H_flag: (n) ->
+    if n then this['F'] |= 0x20 else this['F'] &= 0x1f
+  set_C_flag: (n) ->
+    if n then this['F'] |= 0x10 else this['F'] &= 0x0f
 
   #write 16-bit n to register AF
   writeAF: (n) ->
-    n = n && 0xFFFF
-    @A = n >> 8
-    @F = n & 0x00FF
+    n = n & 0xFFFF
+    this['F'] = n >> 8
+    this['F'] = n & 0x00FF
     n
   readAF: () ->
-    (@A << 8) + @F
+    (this['F'] << 8) + this['F']
   #write 16-bit n to register BC
   writeBC: (n) ->
-    n = n && 0xFFFF
-    @B = n >> 8
-    @C = n & 0x00FF
+    n = n & 0xFFFF
+    this['F'] = n >> 8
+    this['F'] = n & 0x00FF
     n
   readBC: () ->
-    (@B << 8) + @C
+    (this['F'] << 8) + this['F']
   writeDE: (n) ->
-    n = n && 0xFFFF
-    @D = n >> 8
-    @D = n & 0x00FF
+    n = n & 0xFFFF
+    this['F'] = n >> 8
+    this['F'] = n & 0x00FF
     n
   readDE: () ->
-    (@D << 8) + @E
+    (this['F'] << 8) + this['F']
   writeHL: (n) ->
-    n = n && 0xFFFF
-    @H = n >> 8
-    @L = n & 0x00FF
+    n = n & 0xFFFF
+    this['H'] = n >> 8
+    this['L'] = n & 0x00FF
     n
   readHL: () ->
-    (@H << 8) + @L
+    (this['H'] << 8) + this['L']
 
 class clock
-  m: 0
-  t: 0
+  t:0
 
 class MMU
 
@@ -124,6 +133,7 @@ class MMU
   write8: (addr, value) ->
     @read8(addr, value, true)
 
+  #little endian
   write16: (addr, value) ->
     @write8(addr, value && 0xFF, true)
     @write8(addr+1, (value && 0xFF00) >> 8, true)
@@ -131,7 +141,13 @@ class MMU
 
 window.CPU = class CPU
   constructor: () ->
+    A = Symbol()
+    @haltState = false
+    @stopState = false
+    @interruptsEnabled = true
     @register = new register
+    @register[A] = -1
+    console.log(@register[A])
     @clock = new clock
     @MMU = new MMU(@register)
   resetcpu: ()  =>

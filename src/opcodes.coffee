@@ -1,1075 +1,1190 @@
-opcodes = [
-  #No OP
-  NOP = (cpu) ->
-    cpu.register.PC += 1
-    cpu.clock.m += 1
+class helperOps
+
+  #16-bit n1, n2
+  half_carry_check16: (n1, n2) ->
+    (n1&0xfff) + (n2&0xfff) >= 0x1000
+
+  #8-bit n1, n2
+  half_carry_check8: (n1, n2) ->
+    (n1&0xf) + (n2&0xf) >= 0x10
+
+  #return n as signed (2s complement)
+  toSigned: (n) ->
+    if n > 127
+      n = -((~n+1)&0xff)
+    else
+      n
+
+  #=======================
+  #8-bit loads
+  #=======================
+
+  #Load 8-bit n into r
+  LDrn: (cpu, r) ->
+    cpu.register[r] = cpu.MMU.read8(cpu.register['PC']+1)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  #Load register r from from register x
+  LDrr: (cpu, r, x) ->
+    cpu.register[r] = cpu.register[x]
+    cpu.register['PC'] += 1
     cpu.clock.t += 4
 
-  #load BC with constant nn
-  LDBCnn = (cpu) ->
-    cpu.register.C = cpu.MMU.read8(cpu.register.PC)
-    cpu.register.B = cpu.MMU.read8(cpu.register.PC+1)
-    cpu.register.PC += 3
-    cpu.clock.m += 3
+  #Load register r from (HL)
+  LDrHL: (cpu, r) ->
+    register[r] = cpu.MMU.read8(cpu.register.readHL())
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Load (BC) from register r
+  LDBCr: (cpu, r) ->
+    cpu.MMU.write8(cpu.register.readBC(), register[r])
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Load (DE) from register r
+  LDDEr: (cpu, r) ->
+    cpu.MMU.write8(cpu.register.readDE(), register[r])
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Load (HL) from register r
+  LDHLr: (cpu, r) ->
+    cpu.MMU.write8(cpu.register.readHL(), register[r])
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Load (HL) with 8-bit operand n
+  LDHLn: (cpu) ->
+    n = cpu.MMU.read8(cpu.register['PC']+1)
+    cpu.MMU.writeHL(n)
+    cpu.register['PC'] += 2
     cpu.clock.t += 12
 
-  #load address BC with A
-  LDBCmA = (cpu) ->
-    BC = cpu.register.readBC()
-    cpu.MMU.write8(BC, A)
-    cpu.register.PC += 1
-    cpu.clock.m += 1
-    cpu.clock.t += 8
-
-  #Increment BC
-  INC_BC = (cpu) ->
-    cpu.register.writeBC(cpu.register.readBC()+1)
-    cpu.register.PC += 1
-    cpu.clock.m += 1
-    cpu.clock.t += 8
-
-  #Increment B
-  INC_B = (cpu) ->
-    cpu.register.B++
-    if (cpu.register.B == 256)
-      cpu.register.B = 0
-    cpu.register.PC += 1
-    cpu.clock.m += 1
-    cpu.clock.t += 4
-    #TODO: set flags on these
-
-  #Decrement B
-  DEC_B = (cpu) ->
-    cpu.register.B--
-    if (cpu.register.B == -1)
-      cpu.register.B = 255
-    cpu.register.PC += 1
-    cpu.clock.m += 1
-    cpu.clock.t += 4
-
-  #Load 8-bit n into B
-  LDBn = (cpu) ->
-    n = cpu.MMU.read8(cpu.register.PC+1)
-    cpu.register.B = n
-    cpu.register.PC += 2
-    cpu.clock.m += 2
-    cpu.clock.t += 8
-
-	#7
- 	OPCODE_7 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("7 unimplemented opcode")
-	#8
- 	OPCODE_8 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("8 unimplemented opcode")
-	#9
- 	OPCODE_9 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("9 unimplemented opcode")
-	#10
- 	OPCODE_10 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("10 unimplemented opcode")
-	#11
- 	OPCODE_11 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("11 unimplemented opcode")
-	#12
- 	OPCODE_12 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("12 unimplemented opcode")
-	#13
- 	OPCODE_13 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("13 unimplemented opcode")
-	#14 load 8-bit immediate into C
-  OPCODE_14 = (cpu) ->
-    n = cpu.MMU.read8(cpu.register.PC+1)
-    cpu.register.C = n
-    cpu.register.PC += 2
-    cpu.clock.m += 2
-    cpu.clock.t += 8
-	#15
- 	OPCODE_15 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("15 unimplemented opcode")
-	#16
- 	OPCODE_16 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("16 unimplemented opcode")
-	#17
- 	OPCODE_17 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("17 unimplemented opcode")
-	#18
- 	OPCODE_18 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("18 unimplemented opcode")
-	#19
- 	OPCODE_19 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("19 unimplemented opcode")
-	#20
- 	OPCODE_20 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("20 unimplemented opcode")
-	#21
- 	OPCODE_21 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("21 unimplemented opcode")
-	#22
- 	OPCODE_22 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("22 unimplemented opcode")
-	#23
- 	OPCODE_23 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("23 unimplemented opcode")
-	#24
- 	OPCODE_24 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("24 unimplemented opcode")
-	#25
- 	OPCODE_25 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("25 unimplemented opcode")
-	#26
- 	OPCODE_26 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("26 unimplemented opcode")
-	#27
- 	OPCODE_27 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("27 unimplemented opcode")
-	#28
- 	OPCODE_28 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("28 unimplemented opcode")
-	#29
- 	OPCODE_29 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("29 unimplemented opcode")
-	#30
- 	OPCODE_30 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("30 unimplemented opcode")
-	#31
- 	OPCODE_31 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("31 unimplemented opcode")
-	#0x20 relative jump by signed immediate
- 	JR_NZn = (cpu) ->
-
-	#0x21 load 16-bit immediate into HL
- 	LDHLnn = (cpu) ->
-    cpu.register.L = cpu.MMU.read8(cpu.register.PC+1)
-    cpu.register.H = cpu.MMU.read8(cpu.register.PC+2)
-    cpu.register.PC += 3
-    cpu.clock.m += 3
-    cpu.clock.t += 12
-	#34
- 	OPCODE_34 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("34 unimplemented opcode")
-	#35
- 	OPCODE_35 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("35 unimplemented opcode")
-	#36
- 	OPCODE_36 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("36 unimplemented opcode")
-	#37
- 	OPCODE_37 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("37 unimplemented opcode")
-	#38
- 	OPCODE_38 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("38 unimplemented opcode")
-	#39
- 	OPCODE_39 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("39 unimplemented opcode")
-	#40
- 	OPCODE_40 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("40 unimplemented opcode")
-	#41
- 	OPCODE_41 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("41 unimplemented opcode")
-	#42
- 	OPCODE_42 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("42 unimplemented opcode")
-	#43
- 	OPCODE_43 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("43 unimplemented opcode")
-	#44
- 	OPCODE_44 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("44 unimplemented opcode")
-	#45
- 	OPCODE_45 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("45 unimplemented opcode")
-	#46
- 	OPCODE_46 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("46 unimplemented opcode")
-	#47
- 	OPCODE_47 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("47 unimplemented opcode")
-	#48
- 	OPCODE_48 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("48 unimplemented opcode")
-	#49
- 	OPCODE_49 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("49 unimplemented opcode")
-	#0x32 Load A into (HL), dec HL
- 	LDHLaDEC = (cpu) ->
-    HL = cpu.register.readHL()
-    cpu.MMU.write8(HL, cpu.register.A)
-    cpu.register.writeHL(HL-1)
-    cpu.register.PC += 1
-    cpu.clock.m += 1
-    cpu.clock.t += 8
-	#51
- 	OPCODE_51 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("51 unimplemented opcode")
-	#52
- 	OPCODE_52 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("52 unimplemented opcode")
-	#53
- 	OPCODE_53 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("53 unimplemented opcode")
-	#54
- 	OPCODE_54 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("54 unimplemented opcode")
-	#55
- 	OPCODE_55 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("55 unimplemented opcode")
-	#56
- 	OPCODE_56 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("56 unimplemented opcode")
-	#57
- 	OPCODE_57 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("57 unimplemented opcode")
-	#58
- 	OPCODE_58 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("58 unimplemented opcode")
-	#59
- 	OPCODE_59 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("59 unimplemented opcode")
-	#60
- 	OPCODE_60 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("60 unimplemented opcode")
-	#61
- 	OPCODE_61 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("61 unimplemented opcode")
-	#62
- 	OPCODE_62 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("62 unimplemented opcode")
-	#63
- 	OPCODE_63 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("63 unimplemented opcode")
-	#64
- 	OPCODE_64 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("64 unimplemented opcode")
-	#65
- 	OPCODE_65 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("65 unimplemented opcode")
-	#66
- 	OPCODE_66 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("66 unimplemented opcode")
-	#67
- 	OPCODE_67 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("67 unimplemented opcode")
-	#68
- 	OPCODE_68 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("68 unimplemented opcode")
-	#69
- 	OPCODE_69 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("69 unimplemented opcode")
-	#70
- 	OPCODE_70 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("70 unimplemented opcode")
-	#71
- 	OPCODE_71 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("71 unimplemented opcode")
-	#72
- 	OPCODE_72 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("72 unimplemented opcode")
-	#73
- 	OPCODE_73 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("73 unimplemented opcode")
-	#74
- 	OPCODE_74 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("74 unimplemented opcode")
-	#75
- 	OPCODE_75 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("75 unimplemented opcode")
-	#76
- 	OPCODE_76 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("76 unimplemented opcode")
-	#77
- 	OPCODE_77 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("77 unimplemented opcode")
-	#78
- 	OPCODE_78 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("78 unimplemented opcode")
-	#79
- 	OPCODE_79 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("79 unimplemented opcode")
-	#80
- 	OPCODE_80 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("80 unimplemented opcode")
-	#81
- 	OPCODE_81 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("81 unimplemented opcode")
-	#82
- 	OPCODE_82 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("82 unimplemented opcode")
-	#83
- 	OPCODE_83 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("83 unimplemented opcode")
-	#84
- 	OPCODE_84 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("84 unimplemented opcode")
-	#85
- 	OPCODE_85 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("85 unimplemented opcode")
-	#86
- 	OPCODE_86 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("86 unimplemented opcode")
-	#87
- 	OPCODE_87 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("87 unimplemented opcode")
-	#88
- 	OPCODE_88 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("88 unimplemented opcode")
-	#89
- 	OPCODE_89 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("89 unimplemented opcode")
-	#90
- 	OPCODE_90 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("90 unimplemented opcode")
-	#91
- 	OPCODE_91 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("91 unimplemented opcode")
-	#92
- 	OPCODE_92 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("92 unimplemented opcode")
-	#93
- 	OPCODE_93 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("93 unimplemented opcode")
-	#94
- 	OPCODE_94 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("94 unimplemented opcode")
-	#95
- 	OPCODE_95 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("95 unimplemented opcode")
-	#96
- 	OPCODE_96 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("96 unimplemented opcode")
-	#97
- 	OPCODE_97 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("97 unimplemented opcode")
-	#98
- 	OPCODE_98 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("98 unimplemented opcode")
-	#99
- 	OPCODE_99 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("99 unimplemented opcode")
-	#100
- 	OPCODE_100 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("100 unimplemented opcode")
-	#101
- 	OPCODE_101 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("101 unimplemented opcode")
-	#102
- 	OPCODE_102 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("102 unimplemented opcode")
-	#103
- 	OPCODE_103 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("103 unimplemented opcode")
-	#104
- 	OPCODE_104 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("104 unimplemented opcode")
-	#105
- 	OPCODE_105 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("105 unimplemented opcode")
-	#106
- 	OPCODE_106 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("106 unimplemented opcode")
-	#107
- 	OPCODE_107 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("107 unimplemented opcode")
-	#108
- 	OPCODE_108 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("108 unimplemented opcode")
-	#109
- 	OPCODE_109 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("109 unimplemented opcode")
-	#110
- 	OPCODE_110 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("110 unimplemented opcode")
-	#111
- 	OPCODE_111 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("111 unimplemented opcode")
-	#112
- 	OPCODE_112 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("112 unimplemented opcode")
-	#113
- 	OPCODE_113 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("113 unimplemented opcode")
-	#114
- 	OPCODE_114 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("114 unimplemented opcode")
-	#115
- 	OPCODE_115 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("115 unimplemented opcode")
-	#116
- 	OPCODE_116 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("116 unimplemented opcode")
-	#117
- 	OPCODE_117 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("117 unimplemented opcode")
-	#118
- 	OPCODE_118 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("118 unimplemented opcode")
-	#119
- 	OPCODE_119 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("119 unimplemented opcode")
-	#120
- 	OPCODE_120 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("120 unimplemented opcode")
-	#121
- 	OPCODE_121 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("121 unimplemented opcode")
-	#122
- 	OPCODE_122 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("122 unimplemented opcode")
-	#123
- 	OPCODE_123 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("123 unimplemented opcode")
-	#124
- 	OPCODE_124 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("124 unimplemented opcode")
-	#125
- 	OPCODE_125 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("125 unimplemented opcode")
-	#126
- 	OPCODE_126 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("126 unimplemented opcode")
-	#127
- 	OPCODE_127 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("127 unimplemented opcode")
-	#128
- 	OPCODE_128 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("128 unimplemented opcode")
-	#129
- 	OPCODE_129 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("129 unimplemented opcode")
-	#130
- 	OPCODE_130 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("130 unimplemented opcode")
-	#131
- 	OPCODE_131 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("131 unimplemented opcode")
-	#132
- 	OPCODE_132 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("132 unimplemented opcode")
-	#133
- 	OPCODE_133 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("133 unimplemented opcode")
-	#134
- 	OPCODE_134 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("134 unimplemented opcode")
-	#135
- 	OPCODE_135 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("135 unimplemented opcode")
-	#136
- 	OPCODE_136 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("136 unimplemented opcode")
-	#137
- 	OPCODE_137 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("137 unimplemented opcode")
-	#138
- 	OPCODE_138 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("138 unimplemented opcode")
-	#139
- 	OPCODE_139 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("139 unimplemented opcode")
-	#140
- 	OPCODE_140 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("140 unimplemented opcode")
-	#141
- 	OPCODE_141 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("141 unimplemented opcode")
-	#142
- 	OPCODE_142 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("142 unimplemented opcode")
-	#143
- 	OPCODE_143 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("143 unimplemented opcode")
-	#144
- 	OPCODE_144 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("144 unimplemented opcode")
-	#145
- 	OPCODE_145 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("145 unimplemented opcode")
-	#146
- 	OPCODE_146 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("146 unimplemented opcode")
-	#147
- 	OPCODE_147 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("147 unimplemented opcode")
-	#148
- 	OPCODE_148 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("148 unimplemented opcode")
-	#149
- 	OPCODE_149 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("149 unimplemented opcode")
-	#150
- 	OPCODE_150 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("150 unimplemented opcode")
-	#151
- 	OPCODE_151 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("151 unimplemented opcode")
-	#152
- 	OPCODE_152 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("152 unimplemented opcode")
-	#153
- 	OPCODE_153 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("153 unimplemented opcode")
-	#154
- 	OPCODE_154 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("154 unimplemented opcode")
-	#155
- 	OPCODE_155 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("155 unimplemented opcode")
-	#156
- 	OPCODE_156 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("156 unimplemented opcode")
-	#157
- 	OPCODE_157 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("157 unimplemented opcode")
-	#158
- 	OPCODE_158 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("158 unimplemented opcode")
-	#159
- 	OPCODE_159 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("159 unimplemented opcode")
-	#160
- 	OPCODE_160 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("160 unimplemented opcode")
-	#161
- 	OPCODE_161 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("161 unimplemented opcode")
-	#162
- 	OPCODE_162 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("162 unimplemented opcode")
-	#163
- 	OPCODE_163 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("163 unimplemented opcode")
-	#164
- 	OPCODE_164 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("164 unimplemented opcode")
-	#165
- 	OPCODE_165 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("165 unimplemented opcode")
-	#166
- 	OPCODE_166 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("166 unimplemented opcode")
-	#167
- 	OPCODE_167 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("167 unimplemented opcode")
-	#168
- 	OPCODE_168 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("168 unimplemented opcode")
-	#169
- 	OPCODE_169 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("169 unimplemented opcode")
-	#170
- 	OPCODE_170 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("170 unimplemented opcode")
-	#171
- 	OPCODE_171 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("171 unimplemented opcode")
-	#172
- 	OPCODE_172 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("172 unimplemented opcode")
-	#173
- 	OPCODE_173 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("173 unimplemented opcode")
-	#174
- 	OPCODE_174 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("174 unimplemented opcode")
-
-	#175 XOR A against A
-  OPCODE_175 = (cpu) ->
-    r = cpu.register.A^cpu.register.A
-    cpu.register.A = r
-    cpu.register.F = if r then 0 else 0x80
-    cpu.register.PC++
-    cpu.clock.m += 1
-    cpu.clock.t += 4
-
-	#176
- 	OPCODE_176 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("176 unimplemented opcode")
-	#177
- 	OPCODE_177 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("177 unimplemented opcode")
-	#178
- 	OPCODE_178 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("178 unimplemented opcode")
-	#179
- 	OPCODE_179 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("179 unimplemented opcode")
-	#180
- 	OPCODE_180 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("180 unimplemented opcode")
-	#181
- 	OPCODE_181 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("181 unimplemented opcode")
-	#182
- 	OPCODE_182 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("182 unimplemented opcode")
-	#183
- 	OPCODE_183 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("183 unimplemented opcode")
-	#184
- 	OPCODE_184 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("184 unimplemented opcode")
-	#185
- 	OPCODE_185 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("185 unimplemented opcode")
-	#186
- 	OPCODE_186 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("186 unimplemented opcode")
-	#187
- 	OPCODE_187 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("187 unimplemented opcode")
-	#188
- 	OPCODE_188 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("188 unimplemented opcode")
-	#189
- 	OPCODE_189 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("189 unimplemented opcode")
-	#190
- 	OPCODE_190 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("190 unimplemented opcode")
-	#191
- 	OPCODE_191 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("191 unimplemented opcode")
-	#192
- 	OPCODE_192 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("192 unimplemented opcode")
-	#193
- 	OPCODE_193 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("193 unimplemented opcode")
-	#194
- 	OPCODE_194 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("194 unimplemented opcode")
-
-	#0xC3 Jump to 16-bit immediate
- 	OPCODE_195 = (cpu) ->
-    loc = cpu.MMU.read16(cpu.register.PC+1)
-    cpu.register.PC = loc
-    cpu.clock.m += 3
+  #Load (NN) with register r
+  LDNNr: (cpu, r) ->
+    NN = cpu.MMU.write8(cpu.MMU.read16(cpu.register['PC']+1))
+    cpu.MMU.write8(NN, cpu.register[r])
+    cpu.register['PC'] += 3
     cpu.clock.t += 16
 
-	#196
- 	OPCODE_196 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("196 unimplemented opcode")
-	#197
- 	OPCODE_197 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("197 unimplemented opcode")
-	#198
- 	OPCODE_198 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("198 unimplemented opcode")
-	#199
- 	OPCODE_199 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("199 unimplemented opcode")
-	#200
- 	OPCODE_200 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("200 unimplemented opcode")
-	#201
- 	OPCODE_201 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("201 unimplemented opcode")
-	#202
-  OPCODE_202 = (cpu) ->
-    cpu.register.PC++
-    console.log("202 unimplemented opcode")
-	#203
- 	OPCODE_203 = (cpu) ->
-    cpu.register.PC++
-    console.log("203 unimplemented opcode")
-    console.log("THIS IS THE CB PREFIX")
-	#204
- 	OPCODE_204 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("204 unimplemented opcode")
-	#205
- 	OPCODE_205 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("205 unimplemented opcode")
-	#206
- 	OPCODE_206 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("206 unimplemented opcode")
-	#207
- 	OPCODE_207 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("207 unimplemented opcode")
-	#208
- 	OPCODE_208 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("208 unimplemented opcode")
-	#209
- 	OPCODE_209 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("209 unimplemented opcode")
-	#210
- 	OPCODE_210 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("210 unimplemented opcode")
-	#211
- 	OPCODE_211 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("211 unimplemented opcode")
-	#212
- 	OPCODE_212 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("212 unimplemented opcode")
-	#213
- 	OPCODE_213 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("213 unimplemented opcode")
-	#214
- 	OPCODE_214 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("214 unimplemented opcode")
-	#215
- 	OPCODE_215 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("215 unimplemented opcode")
-	#216
- 	OPCODE_216 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("216 unimplemented opcode")
-	#217
- 	OPCODE_217 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("217 unimplemented opcode")
-	#218
- 	OPCODE_218 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("218 unimplemented opcode")
-	#219
- 	OPCODE_219 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("219 unimplemented opcode")
-	#220
- 	OPCODE_220 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("220 unimplemented opcode")
-	#221
- 	OPCODE_221 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("221 unimplemented opcode")
-	#222
- 	OPCODE_222 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("222 unimplemented opcode")
-	#223
- 	OPCODE_223 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("223 unimplemented opcode")
-	#224
- 	OPCODE_224 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("224 unimplemented opcode")
-	#225
- 	OPCODE_225 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("225 unimplemented opcode")
-	#226
- 	OPCODE_226 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("226 unimplemented opcode")
-	#227
- 	OPCODE_227 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("227 unimplemented opcode")
-	#228
- 	OPCODE_228 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("228 unimplemented opcode")
-	#229
- 	OPCODE_229 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("229 unimplemented opcode")
-	#230
- 	OPCODE_230 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("230 unimplemented opcode")
-	#231
- 	OPCODE_231 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("231 unimplemented opcode")
-	#232
- 	OPCODE_232 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("232 unimplemented opcode")
-	#233
- 	OPCODE_233 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("233 unimplemented opcode")
-	#234
- 	OPCODE_234 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("234 unimplemented opcode")
-	#235
- 	OPCODE_235 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("235 unimplemented opcode")
-	#236
- 	OPCODE_236 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("236 unimplemented opcode")
-	#237
- 	OPCODE_237 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("237 unimplemented opcode")
-	#238
- 	OPCODE_238 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("238 unimplemented opcode")
-	#239
- 	OPCODE_239 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("239 unimplemented opcode")
-	#240
- 	OPCODE_240 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("240 unimplemented opcode")
-	#241
- 	OPCODE_241 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("241 unimplemented opcode")
-	#242
- 	OPCODE_242 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("242 unimplemented opcode")
-	#243
- 	OPCODE_243 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("243 unimplemented opcode")
-	#244
- 	OPCODE_244 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("244 unimplemented opcode")
-	#245
- 	OPCODE_245 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("245 unimplemented opcode")
-	#246
- 	OPCODE_246 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("246 unimplemented opcode")
-	#247
- 	OPCODE_247 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("247 unimplemented opcode")
-	#248
- 	OPCODE_248 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("248 unimplemented opcode")
-	#249
- 	OPCODE_249 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("249 unimplemented opcode")
-	#250
- 	OPCODE_250 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("250 unimplemented opcode")
-	#251
- 	OPCODE_251 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("251 unimplemented opcode")
-	#252
- 	OPCODE_252 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("252 unimplemented opcode")
-	#253
- 	OPCODE_253 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("253 unimplemented opcode")
-	#254
- 	OPCODE_254 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("254 unimplemented opcode")
-	#255
- 	OPCODE_255 = (cpu) ->
- 		cpu.register.PC++
- 		console.log("255 unimplemented opcode")
+  #Load value at $FF00 + C into A
+  LDAC: (cpu) ->
+    val = cpu.MMU.read8(0xFF00 + cpu.register['C'])
+    cpu.register['A'] = val
+    cpu.MMU.register['PC'] += 1
+    cpu.clock.t += 8
 
+  #Load value A into ($FF00+C)
+  LDCA: (cpu) ->
+    val = cpu.register['A']
+    cpu.MMU.write8(0xFF00 + cpu.register['C'], val)
+    cpu.MMU.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Load A with (HL), decrement HL
+  LDAHLmD: (cpu) ->
+    val = cpu.MMU.read8(cpu.register.readHL())
+    a = val
+    cpu.register.writeHL(cpu.register.readHL() -1)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Load (HL) with A, decrement HL
+  LDHLmAD: (cpu) ->
+    a = cpu.register['A']
+    cpu.MMU.write8(cpu.register.readHL(), a)
+    cpu.register.writeHL(cpu.register.readHL() -1)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Load A with (HL), increment HL
+  LDAHLmI: (cpu) ->
+    val = cpu.MMU.read8(cpu.register.readHL())
+    a = val
+    cpu.register.writeHL(cpu.register.readHL() +1)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Load (HL) with A, increment HL
+  LDHLmAI: (cpu) ->
+    a = cpu.register['A']
+    cpu.MMU.write8(cpu.register.readHL(), a)
+    cpu.register.writeHL(cpu.register.readHL() +1)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Load A into (0xFF00 + n)
+  LDHnA: (cpu) ->
+    n = cpu.MMU.read8(cpu.register['PC']+1)
+    cpu.MMU.write8(0xFF00 + n, cpu.register['A'])
+    cpu.register['PC'] += 2
+    cpu.clock.t += 12
+
+  #Load (0xFF00 + n) into A
+  LDHAn: (cpu) ->
+    n = cpu.MMU.read8(cpu.register['PC']+1)
+    cpu.register['A'] = 0xFF00 + n
+    cpu.register['PC'] += 2
+    cpu.clock.t += 12
+
+  #====================
+  #16-bit loads
+  #====================
+  LDrrnn: (cpu, rr) ->
+    nn = cpu.MMU.read16(cpu.register['PC']+1)
+    switch rr
+      when 'BC'
+        cpu.register.writeBC(nn)
+      when 'DE'
+        cpu.register.writeDL(nn)
+      when 'HL'
+        cpu.register.writeHL(nn)
+      when 'SP'
+        cpu.register.write(nn)
+    cpu.register['PC'] += 3
+    cpu.clock.t += 12
+
+  #Copy HL to SP
+  LDSPHL: (cpu) ->
+    cpu.register['SP'] = cpu.register['HL']
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Load SP+n into HL
+  LDHLSPn: (cpu) ->
+    n = cpu.MMU.read8(cpu.register['PC']+1)
+    n = toSigned(n)
+    new_HL = n + cpu.register['SP']
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_C_flag(new_HL & 0x100)
+    cpu.register.set_H_flag(half_carry_check16(n, cpu.register['SP']))
+    cpu.register.writeHL(new_HL)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 12
+
+  #Copy SP value into mem loc nn
+  LDnnSP: (cpu) ->
+    nn = cpu.MMU.read16(cpu.register['PC']+1)
+    cpu.MMU.write8(nn, cpu.register['SP'])
+    cpu.register['PC'] += 3
+    cpu.clock.t += 20
+
+  #Push 16-byte value onto stack. Dec SP twice
+  PUSH: (cpu, rr) ->
+    val = 0
+    sp = cpu.register.readSP()
+    switch rr
+      when 'AF' then val = cpu.register.readAF()
+      when 'BC' then val = cpu.register.readBC()
+      when 'DE' then val = cpu.register.readDE()
+      when 'HL' then val = cpu.register.readHL()
+    hi = (val & 0xFF00) >> 8
+    low = (val & 0xFF)
+    cpu.MMU.write8(sp-1, hi)
+    cpu.MMU.write8(sp-2, low)
+    cpu.register['SP'] -= 2
+    cpu.register['PC'] += 3
+    cpu.clock.t += 16
+
+  #Pop 16-byte value from stack. inc SP twice
+  POP: (cpu, rr) ->
+    sp = cpu.register.readSP()
+    hi = cpu.MMU.read8(sp+1)
+    low = cpu.MMU.read8(sp)
+    val = (hi << 8) | low
+    switch rr
+      when 'AF' then cpu.register.writeAF(val)
+      when 'BC' then cpu.register.writeBC(val)
+      when 'DE' then cpu.register.writrDE(val)
+      when 'HL' then cpu.register.writeHL(val)
+    cpu.register['SP'] += 2
+    cpu.register['PC'] += 3
+    cpu.clock.t += 12
+
+  #=========================
+  #8-bit ALU
+  #=========================
+
+  #Add n to r
+  ADDrr: (cpu, r, x) ->
+    n = cpu.register[x]
+    val = cpu.register[r] + n
+    cpu.register.set_H_flag(half_carry_check8(n, cpu.register[r]))
+    cpu.register.set_C_flag(val > 0xFF)
+    val &= 0xFF
+    cpu.register[r] = val
+    cpu.register.set_Z_flag(!val)
+    cpu.register.set_N_flag(0)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  ADDrHLm: (cpu) ->
+    n = cpu.MMU.read8(cpu.register.readHL())
+    val = cpu.register[r] + n
+    cpu.register.set_H_flag(half_carry_check8(n, cpu.register[r]))
+    cpu.register.set_C_flag(val > 0xFF)
+    val &= 0xFF
+    cpu.register[r] = val
+    cpu.register.set_Z_flag(!val)
+    cpu.register.set_N_flag(0)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Add n to r
+  ADDrn: (cpu, r) ->
+    n = cpu.MMU.read8(cpu.register['PC']+1)
+    val = cpu.register[r] + n
+    cpu.register.set_H_flag(half_carry_check8(n, cpu.register[r]))
+    cpu.register.set_C_flag(val > 0xFF)
+    val &= 0xFF
+    cpu.register[r] = val
+    cpu.register.set_Z_flag(!val)
+    cpu.register.set_N_flag(0)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+
+  #=========================
+  #Inc and Decs
+  #=========================
+
+  #Increment register r
+  INCr: (cpu, r) ->
+    val = ++cpu.register[r]
+    if val == 0x100
+      val = 0
+      cpu.register[r] = val
+    cpu.register.set_Z_flag(val)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(!(val & 0xf))
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #Increment 16-bit register rr
+  INCrr: (cpu, rr) ->
+    val = 0
+    switch rr
+      when 'BC'
+        val = cpu.register.readBC()+1
+        val = 0 if val > 0xffff
+        cpu.register.writeBC(val)
+      when 'DE'
+        val = cpu.register.readDE()+1
+        val = 0 if val > 0xffff
+        cpu.register.writeDE(val)
+      when 'HL'
+        val = cpu.register.readHL()+1
+        val = 0 if val > 0xffff
+        cpu.register.writeHL(val)
+      when 'SP'
+        val = cpu.register.readBC()+1
+        val = 0 if val > 0xffff
+        cpu.register.writeBC(val)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Decrement 16-bit register rr
+  DECrr: (cpu, rr) ->
+    val = 0
+    switch rr
+      when 'BC'
+        val = cpu.register.readBC()-1
+        val = 0xffff if val < 0
+        cpu.register.writeBC(val)
+      when 'DE'
+        val = cpu.register.readDE()-1
+        val = 0xffff if val < 0
+        cpu.register.writeDE(val)
+      when 'HL'
+        val = cpu.register.readHL()-1
+        val = 0xffff if val < 0
+        cpu.register.writeHL(val)
+      when 'SP'
+        val = cpu.register.readBC()-1
+        val = 0xffff if val < 0
+        cpu.register.writeBC(val)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Increment (HL)
+  INCHLm: (cpu) ->
+    loc = cpu.readHL()
+    val = cpu.MMU.read8(loc)+1
+    val = 0 if val > 0xff
+    cpu.MMU.write8(loc, val)
+    cpu.register.set_Z_flag(val)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(!(val & 0xf))
+    cpu.register['PC'] += 1
+    cpu.clock.t += 12
+
+  #Decrement register r
+  DECr: (cpu, r) ->
+    val = cpu.register[r]-1
+    if val < 0
+      val = 0xff
+    cpu.register[r] = val
+    cpu.register.set_Z_flag(val)
+    cpu.register.set_N_flag(1)
+    cpu.register.set_H_flag(val != 0xf)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #Decrement (HL)
+  DECHLm: (cpu) ->
+    loc = cpu.readHL()
+    val = cpu.MMU.read8(loc)-1
+    val = 0xff if val < 0
+    cpu.MMU.write8(loc, val)
+    cpu.register.set_Z_flag(val)
+    cpu.register.set_N_flag(1)
+    cpu.register.set_H_flag(val != 0xf)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 12
+
+  #Add to HL from register rr
+  ADDHLr: (cpu, rr) ->
+    val = cpu.register.readHL()
+    other = 0
+    switch rr
+      when 'BC' then other = cpu.register.readBC()
+      when 'DE' then other = cpu.register.readDE()
+      when 'HL' then other = cpu.register.readHL()
+      when 'SP' then other = cpu.register.readSP()
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag( half_carry_check16(val, other) )
+    val += other
+    cpu.register.set_C_flag(val > 0xffff)
+    cpu.register.writeHL(val & 0xffff)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Add 8 bit signed immediate n to SP
+  ADDSPn: (cpu) ->
+    n = cpu.MMU.read8(cpu.register['PC']+1)
+    n = toSigned(n)
+    val = cpu.register['SP'] + n
+    cpu.register.set_H_flag(half_carry_check16(n, cpu.register['SP']))
+    if val > 0xffff || val < 0
+      cpu.register.set_C_flag(1)
+      val &= 0xffff
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Decimal Adjust A
+  DAA: (cpu) ->
+    a = cpu.register['A']
+    nib1 = a & 0xf
+    nib2 = (a & 0xf0) >> 4
+    if nib1 > 9 || cpu.register.H_flag()
+      a += 0x6
+    if nib2 > 9 || cpu.register.C_flag()
+      a += 0x60
+    if a > 0xff
+      a &= 0xff
+      cpu.register.set_C_flag(1)
+    else
+      cpu.register.set_C_flag(0)
+    cpu.register.set_Z_flag(a)
+    cpu.register.set_H_flag(0)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #Bit flip A register
+  CPL: (cpu) ->
+    cpu.register['A'] ^= 0xff
+    cpu.register.set_N_flag(1)
+    cpu.register.set_H_flag(1)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #Flip C flag
+  CCF: (cpu) ->
+    cpu.set_C_flag(!cpu.C_flag())
+    cpu.set_H_flag(0)
+    cpu.set_N_flag(0)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #Set carry flag
+  SFC: (cpu) ->
+    cpu.set_C_flag(1)
+    cpu.set_H_flag(0)
+    cpu.set_N_flag(0)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #CB
+  #Rotate r left, copy bit 7 to C and bit 0
+  RLCr: (cpu, r) ->
+    a = cpu.register[r]
+    c = a >> 7 #0 or 1
+    a = ((a << 1) | c) & 0xff
+    cpu.register[r] = a
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(c)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #CB
+  #Rotate r left, copy bit 7 to C and bit 0
+  RLCHLm: (cpu) ->
+    loc = cpu.register.readHL()
+    a = cpu.MMU.read8(loc)
+    c = a >> 7 #0 or 1
+    a = ((a << 1) | c) & 0xff
+    cpu.MMU.write8(loc, a)
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(c)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 16
+
+  #CB
+  #Rotate r left, copy C to bit 0
+  RLr: (cpu, r) ->
+    a = cpu.register[r]
+    c = a >> 7 #0 or 1
+    a = ((a << 1) | cpu.register.C_flag()) & 0xff
+    cpu.register[r] = a
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(c)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #CB
+  #Rotate r left, copy C to bit 0
+  RLHLm: (cpu) ->
+    loc = cpu.register.readHL()
+    a = cpu.MMU.read8(loc)
+    c = a >> 7 #0 or 1
+    a = ((a << 1) | cpu.register.C_flag()) & 0xff
+    cpu.MMU.write8(loc, a)
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(c)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 16
+
+  #CB
+  #Rotate A right, copy bit 0 to C and bit 7
+  RRCA: (cpu, r) ->
+    a = cpu.register[r]
+    c = a & 1 #bit 0
+    a = (a >> 1) | (c << 7)
+    cpu.register[r] = a
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(c)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #CB
+  #Rotate A right, copy C to bit 7, overflow to C
+  RRA: (cpu, r) ->
+    a = cpu.register[r]
+    c = a & 1 #bit 0
+    a = (a >> 1) | (cpu.register.C_flag() << 7)
+    cpu.register[r] = a
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(c)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #CB
+  #Shift left into carry, LSB to 0
+  SLAr: (cpu, r) ->
+    a = cpu.register[r]
+    c = a >> 7 #0 or 1
+    a = (a << 1) & 0xff
+    cpu.register[r] = a
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(c)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  #CB
+  #Shift left into carry, LSB to 0
+  SLAHLm: (cpu) ->
+    loc = cpu.register.readHL()
+    a = cpu.MMU.read8(loc)
+    c = a >> 7 #0 or 1
+    a = (a << 1) & 0xff
+    cpu.MMU.write8(loc, a)
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(c)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 16
+
+  #CB
+  #Shift r right into carry, MSB no change
+  SRAr: (cpu, r) ->
+    a = cpu.register[r]
+    c = a >> 7 #0 or 1
+    lsb = a & 1
+    a = (a >> 1) | (c << 7)
+    cpu.register[r] = a
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(lsb)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  #CB
+  #Shift r right into carry, MSB no change
+  SRAHLm: (cpu) ->
+    loc = cpu.register.readHL()
+    a = cpu.MMU.read8(loc)
+    c = a >> 7 #0 or 1
+    lsb = a & 1
+    a = (a >> 1) | (c << 7)
+    cpu.MMU.write8(loc, a)
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(lsb)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 16
+
+  #CB
+  #Shift r right into carry, MSB=0
+  SRLr: (cpu, r) ->
+    a = cpu.register[r]
+    lsb = a & 1
+    a = (a >> 1)
+    cpu.register[r] = a
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(lsb)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  #CB
+  #Shift (HL) right into carry, MSB=0
+  SRLHLm: (cpu) ->
+    loc = cpu.register.readHL()
+    a = cpu.MMU.read8(loc)
+    lsb = a & 1
+    a = (a >> 1)
+    cpu.MMU.write8(loc, a)
+    cpu.register.set_Z_flag(0)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(lsb)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 16
+
+  #CB
+  #set Z to not bit b of r
+  BITbr: (cpu, b, r) ->
+    a = register[r]
+    bit = a & (1 << b)
+    cpu.register.set_Z_flag(!bit)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(1)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  #CB
+  #set Z to not bit b of r
+  BITbHLm: (cpu, b) ->
+    loc = cpu.register.readHL()
+    a = cpu.MMU.read8(loc)
+    bit = a & (1 << b)
+    cpu.register.set_Z_flag(!bit)
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(1)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 16
+
+  #CB
+  #set bit b of r
+  SETbr: (cpu, b, r) ->
+    a = register[r]
+    a |= (1 << b)
+    register[r] = a
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  #CB
+  #set bit b of (HL)
+  SETbHLm: (cpu, b) ->
+    loc = cpu.register.readHL()
+    a = cpu.MMU.read8(loc)
+    a |= (1 << b)
+    cpu.write8(loc, a)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 16
+
+  #CB
+  #reset bit b of r
+  RESbr: (cpu, b, r) ->
+    a = register[r]
+    a &= (0 << b)
+    register[r] = a
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  #CB
+  #reset bit b of (HL)
+  RESbHLm: (cpu, b) ->
+    loc = cpu.register.readHL()
+    a = cpu.MMU.read8(loc)
+    a &= (0 << b)
+    cpu.write8(loc, a)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 16
+
+  #Jump to two-byte immediate
+  JPnn: (cpu) ->
+    loc = cpu.MMU.read16(cpu.register['PC'] + 1)
+    cpu.register['PC'] = loc
+    cpu.clock.t += 12
+
+  #Conditional jump to two-byte immediate
+  JPNZnn: (cpu) ->
+    if !cpu.Z_flag()
+      loc = cpu.MMU.read16(cpu.register['PC'] + 1)
+      cpu.register['PC'] = loc
+    else
+      cpu.register['PC'] += 3
+    cpu.clock.t += 12
+
+  #Conditional jump to two-byte immediate
+  JPZnn: (cpu) ->
+    if cpu.Z_flag()
+      loc = cpu.MMU.read16(cpu.register['PC'] + 1)
+      cpu.register['PC'] = loc
+    else
+      cpu.register['PC'] += 3
+    cpu.clock.t += 12
+
+  #Conditional jump to two-byte immediate
+  JPNCnn: (cpu) ->
+    if !cpu.C_flag()
+      loc = cpu.MMU.read16(cpu.register['PC'] + 1)
+      cpu.register['PC'] = loc
+    else
+      cpu.register['PC'] += 3
+    cpu.clock.t += 12
+
+  #Conditional jump to two-byte immediate
+  JPCnn: (cpu) ->
+    if cpu.C_flag()
+      loc = cpu.MMU.read16(cpu.register['PC'] + 1)
+      cpu.register['PC'] = loc
+    else
+      cpu.register['PC'] += 3
+    cpu.clock.t += 12
+
+  #Jump to (HL)
+  JPHLm: (cpu) ->
+    loc = cpu.register.readHL()
+    cpu.register['PC'] = loc
+    cpu.clock.t += 4
+
+  #relative jump n
+  JRn: (cpu) ->
+    n = cpu.MMU.read8(cpu.register['PC'] + 1)
+    n = toSigned(n)
+    cpu.register['PC'] += n
+    cpu.clock.t += 8
+
+  #relative conditional jumps
+  JRNZn: (cpu) ->
+    if !cpu.Z_flag()
+      n = cpu.MMU.read8(cpu.register['PC'] + 1)
+      n = toSigned(n)
+      cpu.register['PC'] += n
+    else
+      cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  JRZn: (cpu) ->
+    if cpu.Z_flag()
+      n = cpu.MMU.read8(cpu.register['PC'] + 1)
+      n = toSigned(n)
+      cpu.register['PC'] += n
+    else
+      cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  JRNCn: (cpu) ->
+    if !cpu.C_flag()
+      n = cpu.MMU.read8(cpu.register['PC'] + 1)
+      n = toSigned(n)
+      cpu.register['PC'] += n
+    else
+      cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  JRCn: (cpu) ->
+    if cpu.Z_flag()
+      n = cpu.MMU.read8(cpu.register['PC'] + 1)
+      n = toSigned(n)
+      cpu.register['PC'] += n
+    else
+      cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+
+
+opcodes = [
+  #00
+  NOP = (cpu) ->
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+  LDBCnn = (cpu) ->
+    helperOps.LDrrnn(cpu, 'BC')
+  LDBCmA = (cpu) ->
+    helperOps.LDBCr(cpu, 'A')
+  INCBC = (cpu) ->
+    helperOps.INCrr(cpu, 'BC')
+  INCr_b = (cpu) ->
+    helperOps.INCr(cpu, 'B')
+  DECr_b = (cpu) ->
+    helperOps.DECr(cpu, 'B')
+  LDrn_b = (cpu) ->
+    helperOps(cpu, 'B')
+  RLCA = (cpu) ->
+    helperOps.RLCr(cpu, 'A')
+  LDmmSP = (cpu) ->
+    helperOps.LDnnSP(cpu)
+  ADDHLBC = (cpu) ->
+    helperOps.ADDHLrr(cpu, 'BC')
+  LDABCm = (cpu) -> ,
+  DECBC = (cpu) ->
+    helperOps.DECrr(cpu, 'BC')
+  INCr_c = (cpu) ->
+    helperOps.INCr(cpu, 'C')
+  DECr_c = (cpu) ->
+    helperOps.DECr(cpu, 'C')
+  LDrn_c = (cpu) ->
+    helperOps(cpu, 'C')
+  RRCA = (cpu) ->
+    helperOps.RRCr(cpu, 'A')
+
+  #10
+  DJNZn = (cpu) ->
+    cpu.stopState = true
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+  LDDEnn = (cpu) ->
+    helperOps.LDrrnn(cpu, 'DE')
+  LDDEmA = (cpu) ->
+    helperOps.LDDEr(cpu, 'A')
+  INCDE = (cpu) ->
+    helperOps.INCrr(cpu, 'DE')
+  INCr_d = (cpu) ->
+    helperOps.INCr(cpu, 'D')
+  DECr_d = (cpu) ->
+    helperOps.DECr(cpu, 'D')
+  LDrn_d = (cpu) ->
+    helperOps(cpu, 'D')
+  RLA = (cpu) ->
+    helperOps.RLr(cpu, 'A')
+  JRn = (cpu) ->
+    helperOps.JRn(cpu)
+  ADDHLDE = (cpu) ->
+    helperOps.ADDHLrr(cpu, 'DE')
+  LDADEm = (cpu) -> ,
+  DECDE = (cpu) ->
+    helperOps.DECrr(cpu, 'DE')
+  INCr_e = (cpu) ->
+    helperOps.INCr(cpu, 'E')
+  DECr_e = (cpu) ->
+    helperOps.DECr(cpu, 'E')
+  LDrn_e = (cpu) ->
+    helperOps(cpu, 'E')
+  RRA = (cpu) ->
+    helperOps.RRr(cpu, 'A')
+
+  #20
+  JRNZn = (cpu) ->
+    helperOps.JRNZn(cpu)
+  LDHLnn = (cpu) ->
+    helperOps.LDrrnn(cpu, 'HL')
+  LDHLIA = (cpu) ->
+    helperOps.LDHLmAI(cpu)
+  INCHL = (cpu) ->
+    helperOps.INCrr(cpu, 'HL')
+  INCr_h = (cpu) ->
+    helperOps.INCr(cpu, 'H')
+  DECr_h = (cpu) ->
+    helperOps.DECr(cpu, 'H')
+  LDrn_h = (cpu) ->
+    helperOps(cpu, 'H')
+  DAA = (cpu) ->
+    helperOps.DAA(cpu)
+  JRZn = (cpu) ->
+    helperOps.JRZn(cpu)
+  ADDHLHL = (cpu) ->
+    helperOps.ADDHLrr(cpu, 'HL')
+  LDAHLI = (cpu) ->
+    helperOps.LDAHLmI(cpu)
+  DECHL = (cpu) ->
+    helperOps.DECrr(cpu, 'HL')
+  INCr_l = (cpu) -> ,
+  DECr_l = (cpu) -> ,
+  LDrn_l = (cpu) ->
+    helperOps(cpu, 'E')
+  CPL = (cpu) ->
+    helperOps.CPL(cpu)
+
+  # 30
+  JRNCn = (cpu) ->
+    helperOps.JRNCn(cpu)
+  LDSPnn = (cpu) ->
+    helperOps.LDrrnn(cpu, 'SP')
+  LDHLDA = (cpu) ->
+    helperOps.LDHLmAD(cpu)
+  INCSP = (cpu) ->
+    helperOps.INCrr(cpu, 'SP')
+  INCHLm = (cpu) ->
+    helperOps.INCHLm(cpu)
+  DECHLm = (cpu) ->
+    helperOps.DECHLm(cpu)
+  LDHLn = (cpu) ->
+    helperOps.LDHLn(cpu)
+  SCF = (cpu) ->
+    helperOps.SCF(cpu)
+  JRCn = (cpu) ->
+    helperOps.JRCn(cpu)
+  ADDHLSP = (cpu) ->
+    helperOps.ADDHLrr(cpu, 'SP')
+  LDAHLD = (cpu) ->
+    helperOps.LDAHLmD(cpu)
+  DECSP = (cpu) ->
+    helperOps.DECrr(cpu, 'SP')
+  INCr_a = (cpu) ->
+    helperOps.INCr(cpu, 'A')
+  DECr_a = (cpu) ->
+    helperOps.DECr(cpu, 'A')
+  LDrn_a = (cpu) -> ,
+  CCF = (cpu) ->
+    helperOps.CCF(cpu)
+
+  # 40
+  LDrr_bb = (cpu) ->
+    helperOps.LDrr(cpu, 'B', 'B')
+  LDrr_bc = (cpu) ->
+    helperOps.LDrr(cpu, 'B', 'C')
+  LDrr_bd = (cpu) ->
+    helperOps.LDrr(cpu, 'B', 'D')
+  LDrr_be = (cpu) ->
+    helperOps.LDrr(cpu, 'B', 'E')
+  LDrr_bh = (cpu) ->
+    helperOps.LDrr(cpu, 'B', 'H')
+  LDrr_bl = (cpu) ->
+    helperOps.LDrr(cpu, 'B', 'L')
+  LDrHLm_b = (cpu) ->
+    helperOps.LDrHL(cpu, 'B')
+  LDrr_ba = (cpu) ->
+    helperOps.LDrr(cpu, 'B', 'A')
+  LDrr_cb = (cpu) ->
+    helperOps.LDrr(cpu, 'C', 'B')
+  LDrr_cc = (cpu) ->
+    helperOps.LDrr(cpu, 'C', 'C')
+  LDrr_cd = (cpu) ->
+    helperOps.LDrr(cpu, 'C', 'D')
+  LDrr_ce = (cpu) ->
+    helperOps.LDrr(cpu, 'C', 'E')
+  LDrr_ch = (cpu) ->
+    helperOps.LDrr(cpu, 'C', 'H')
+  LDrr_cl = (cpu) ->
+    helperOps.LDrr(cpu, 'C', 'L')
+  LDrHLm_c = (cpu) ->
+    helperOps.LDrHL(cpu, 'C')
+  LDrr_ca = (cpu) ->
+    helperOps.LDrr(cpu, 'C', 'A')
+
+  # 50
+  LDrr_db = (cpu) ->
+    helperOps.LDrr(cpu, 'D', 'B')
+  LDrr_dc = (cpu) ->
+    helperOps.LDrr(cpu, 'D', 'C')
+  LDrr_dd = (cpu) ->
+    helperOps.LDrr(cpu, 'D', 'D')
+  LDrr_de = (cpu) ->
+    helperOps.LDrr(cpu, 'D', 'E')
+  LDrr_dh = (cpu) ->
+    helperOps.LDrr(cpu, 'D', 'H')
+  LDrr_dl = (cpu) ->
+    helperOps.LDrr(cpu, 'D', 'L')
+  LDrHLm_d = (cpu) ->
+    helperOps.LDrHL(cpu, 'D')
+  LDrr_da = (cpu) ->
+    helperOps.LDrr(cpu, 'D', 'A')
+  LDrr_eb = (cpu) ->
+    helperOps.LDrr(cpu, 'E', 'B')
+  LDrr_ec = (cpu) ->
+    helperOps.LDrr(cpu, 'E', 'C')
+  LDrr_ed = (cpu) ->
+    helperOps.LDrr(cpu, 'E', 'D')
+  LDrr_ee = (cpu) ->
+    helperOps.LDrr(cpu, 'E', 'E')
+  LDrr_eh = (cpu) ->
+    helperOps.LDrr(cpu, 'E', 'H')
+  LDrr_el = (cpu) ->
+    helperOps.LDrr(cpu, 'E', 'L')
+  LDrHLm_e = (cpu) ->
+    helperOps.LDrHL(cpu, 'E')
+  LDrr_ea = (cpu) ->
+    helperOps.LDrr(cpu, 'E', 'A')
+
+  # 60
+  LDrr_hb = (cpu) ->
+    helperOps.LDrr(cpu, 'H', 'B')
+  LDrr_hc = (cpu) ->
+    helperOps.LDrr(cpu, 'H', 'C')
+  LDrr_hd = (cpu) ->
+    helperOps.LDrr(cpu, 'H', 'D')
+  LDrr_he = (cpu) ->
+    helperOps.LDrr(cpu, 'H', 'E')
+  LDrr_hh = (cpu) ->
+    helperOps.LDrr(cpu, 'H', 'H')
+  LDrr_hl = (cpu) ->
+    helperOps.LDrr(cpu, 'H', 'L')
+  LDrHLm_h = (cpu) ->
+    helperOps.LDrHL(cpu, 'H')
+  LDrr_ha = (cpu) ->
+    helperOps.LDrr(cpu, 'H', 'A')
+  LDrr_lb = (cpu) ->
+    helperOps.LDrr(cpu, 'L', 'B')
+  LDrr_lc = (cpu) ->
+    helperOps.LDrr(cpu, 'L', 'C')
+  LDrr_ld = (cpu) ->
+    helperOps.LDrr(cpu, 'L', 'D')
+  LDrr_le = (cpu) ->
+    helperOps.LDrr(cpu, 'L', 'E')
+  LDrr_lh = (cpu) ->
+    helperOps.LDrr(cpu, 'L', 'H')
+  LDrr_ll = (cpu) ->
+    helperOps.LDrr(cpu, 'L', 'L')
+  LDrHLm_l = (cpu) ->
+    helperOps.LDrHL(cpu, 'L')
+  LDrr_la = (cpu) ->
+    helperOps.LDrr(cpu, 'L', 'A')
+
+  # 70
+  LDHLmr_b = (cpu) ->
+    helperOps.LDHLr(cpu, 'B')
+  LDHLmr_c = (cpu) ->
+    helperOps.LDHLr(cpu, 'C')
+  LDHLmr_d = (cpu) ->
+    helperOps.LDHLr(cpu, 'D')
+  LDHLmr_e = (cpu) ->
+    helperOps.LDHLr(cpu, 'E')
+  LDHLmr_h = (cpu) ->
+    helperOps.LDHLr(cpu, 'H')
+  LDHLmr_l = (cpu) ->
+    helperOps.LDHLr(cpu, 'L')
+  HALT = (cpu) -> ,
+  LDHLmr_a = (cpu) ->
+    helperOps.LDHLr(cpu, 'A')
+  LDrr_ab = (cpu) ->
+    helperOps.LDrr(cpu, 'A', 'B')
+  LDrr_ac = (cpu) ->
+    helperOps.LDrr(cpu, 'A', 'C')
+  LDrr_ad = (cpu) ->
+    helperOps.LDrr(cpu, 'A', 'D')
+  LDrr_ae = (cpu) ->
+    helperOps.LDrr(cpu, 'A', 'E')
+  LDrr_ah = (cpu) ->
+    helperOps.LDrr(cpu, 'A', 'H')
+  LDrr_al = (cpu) ->
+    helperOps.LDrr(cpu, 'A', 'L')
+  LDrHLm_a = (cpu) ->
+    helperOps.LDrHL(cpu, 'A')
+  LDrr_aa = (cpu) ->
+    helperOps.LDrr(cpu,'A', 'A')
+
+  # 80
+  ADDr_b = (cpu) -> ,
+  ADDr_c = (cpu) -> ,
+  ADDr_d = (cpu) -> ,
+  ADDr_e = (cpu) -> ,
+  ADDr_h = (cpu) -> ,
+  ADDr_l = (cpu) -> ,
+  ADDHL = (cpu) -> ,
+  ADDr_a = (cpu) -> ,
+  ADCr_b = (cpu) -> ,
+  ADCr_c = (cpu) -> ,
+  ADCr_d = (cpu) -> ,
+  ADCr_e = (cpu) -> ,
+  ADCr_h = (cpu) -> ,
+  ADCr_l = (cpu) -> ,
+  ADCHL = (cpu) -> ,
+  ADCr_a = (cpu) -> ,
+
+  # 90
+  SUBr_b = (cpu) -> ,
+  SUBr_c = (cpu) -> ,
+  SUBr_d = (cpu) -> ,
+  SUBr_e = (cpu) -> ,
+  SUBr_h = (cpu) -> ,
+  SUBr_l = (cpu) -> ,
+  SUBHL = (cpu) -> ,
+  SUBr_a = (cpu) -> ,
+  SBCr_b = (cpu) -> ,
+  SBCr_c = (cpu) -> ,
+  SBCr_d = (cpu) -> ,
+  SBCr_e = (cpu) -> ,
+  SBCr_h = (cpu) -> ,
+  SBCr_l = (cpu) -> ,
+  SBCHL = (cpu) -> ,
+  SBCr_a = (cpu) -> ,
+
+  # A0
+  ANDr_b = (cpu) -> ,
+  ANDr_c = (cpu) -> ,
+  ANDr_d = (cpu) -> ,
+  ANDr_e = (cpu) -> ,
+  ANDr_h = (cpu) -> ,
+  ANDr_l = (cpu) -> ,
+  ANDHL = (cpu) -> ,
+  ANDr_a = (cpu) -> ,
+  XORr_b = (cpu) -> ,
+  XORr_c = (cpu) -> ,
+  XORr_d = (cpu) -> ,
+  XORr_e = (cpu) -> ,
+  XORr_h = (cpu) -> ,
+  XORr_l = (cpu) -> ,
+  XORHL = (cpu) -> ,
+  XORr_a = (cpu) -> ,
+
+  # B0
+  ORr_b = (cpu) -> ,
+  ORr_c = (cpu) -> ,
+  ORr_d = (cpu) -> ,
+  ORr_e = (cpu) -> ,
+  ORr_h = (cpu) -> ,
+  ORr_l = (cpu) -> ,
+  ORHL = (cpu) -> ,
+  ORr_a = (cpu) -> ,
+  CPr_b = (cpu) -> ,
+  CPr_c = (cpu) -> ,
+  CPr_d = (cpu) -> ,
+  CPr_e = (cpu) -> ,
+  CPr_h = (cpu) -> ,
+  CPr_l = (cpu) -> ,
+  CPHL = (cpu) -> ,
+  CPr_a = (cpu) -> ,
+
+  # C0
+  RETNZ = (cpu) -> ,
+  POPBC = (cpu) ->
+    helperOps.POP(cpu, 'BC')
+  JPNZnn = (cpu) ->
+    helperOps.JPNZnn(cpu)
+  JPnn = (cpu) ->
+    helperOps.JPnn(cpu)
+  CALLNZnn = (cpu) -> ,
+  PUSHBC = (cpu) ->
+    helperOps.PUSH(cpu, 'BC')
+  ADDn = (cpu) -> ,
+  RST00 = (cpu) -> ,
+  RETZ = (cpu) -> ,
+  RET = (cpu) -> ,
+  JPZnn = (cpu) ->
+    helperOps.JPZnn(cpu)
+  MAPcb = (cpu) -> ,
+  CALLZnn = (cpu) -> ,
+  CALLnn = (cpu) -> ,
+  ADCn = (cpu) -> ,
+  RST08 = (cpu) -> ,
+
+  # D0
+  RETNC = (cpu) -> ,
+  POPDE = (cpu) ->
+    helperOps.POP(cpu, 'DE')
+  JPNCnn = (cpu) ->
+    helperOps.JPNCnn(cpu)
+  XX = (cpu) -> ,
+  CALLNCnn = (cpu) -> ,
+  PUSHDE = (cpu) ->
+    helperOps.PUSH(cpu, 'DE')
+  SUBn = (cpu) -> ,
+  RST10 = (cpu) -> ,
+  RETC = (cpu) -> ,
+  RETI = (cpu) -> ,
+  JPCnn = (cpu) ->
+    helperOps.JPNCnn(cpu)
+  XX = (cpu) -> ,
+  CALLCnn = (cpu) -> ,
+  XX = (cpu) -> ,
+  SBCn = (cpu) -> ,
+  RST18 = (cpu) -> ,
+
+  # E0
+  LDIOnA = (cpu) ->
+    helperOps.LDHNa(cpu)
+  POPHL = (cpu) ->
+    helperOps.POP(cpu, 'HL')
+  LDIOCA = (cpu) ->
+    helperOps.LDCA(cpu)
+  XX = (cpu) -> ,
+  XX = (cpu) -> ,
+  PUSHHL = (cpu) ->
+    helperOps.PUSH(cpu, 'HL')
+  ANDn = (cpu) -> ,
+  RST20 = (cpu) -> ,
+  ADDSPn = (cpu) ->
+    helperOps.ADDSPn(cpu)
+  JPHL = (cpu) ->
+    helperOps.JPHLm(cpu)
+  LDmmA = (cpu) -> ,
+  XX = (cpu) -> ,
+  XX = (cpu) -> ,
+  XX = (cpu) -> ,
+  ORn = (cpu) -> ,
+  RST28 = (cpu) -> ,
+
+  # F0
+  LDAIOn = (cpu) ->
+    helperOps.LDHAn(cpu)
+  POPAF = (cpu) ->
+    cpu.POP(cpu, 'AF')
+  LDAIOC = (cpu) ->
+    helperOps.LDAC(cpu)
+  DI = (cpu) ->
+    cpu.interruptsEnabled = false
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+  XX = (cpu) -> ,
+  PUSHAF = (cpu) ->
+    helperOps.PUSH(cpu, 'AF')
+  XORn = (cpu) -> ,
+  RST30 = (cpu) -> ,
+  LDHLSPn = (cpu) ->
+    helperOps.LDHLSPn(cpu)
+  LDSPHL = (cpu) ->
+    helperOps.LDSPHL(cpu)
+  LDAmm = (cpu) -> ,
+  EI = (cpu) ->
+    cpu.interruptsEnabled = true
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+  XX = (cpu) -> ,
+  XX = (cpu) -> ,
+  CPn = (cpu) -> ,
+  RST38= (cpu) ->
 ]
