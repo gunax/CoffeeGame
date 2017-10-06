@@ -208,39 +208,40 @@ class helperOps
   #8-bit ALU
   #=========================
 
-  #Add n to r
-  ADDrr: (cpu, r, x) ->
-    n = cpu.register[x]
-    val = cpu.register[r] + n
-    cpu.register.set_H_flag(half_carry_check8(n, cpu.register[r]))
+  #Add r to A
+  ADD: (cpu, r) ->
+    n = cpu.register[r]
+    val = cpu.register['A'] + n
+    cpu.register.set_H_flag(half_carry_check8(n, cpu.register['A']))
     cpu.register.set_C_flag(val > 0xFF)
     val &= 0xFF
-    cpu.register[r] = val
+    cpu.register['A'] = val
     cpu.register.set_Z_flag(!val)
     cpu.register.set_N_flag(0)
     cpu.register['PC'] += 1
     cpu.clock.t += 4
 
+  #Add (HL) to A
   ADDrHLm: (cpu) ->
     n = cpu.MMU.read8(cpu.register.readHL())
-    val = cpu.register[r] + n
-    cpu.register.set_H_flag(half_carry_check8(n, cpu.register[r]))
+    val = cpu.register['A'] + n
+    cpu.register.set_H_flag(half_carry_check8(n, cpu.register['A']))
     cpu.register.set_C_flag(val > 0xFF)
     val &= 0xFF
-    cpu.register[r] = val
+    cpu.register['A'] = val
     cpu.register.set_Z_flag(!val)
     cpu.register.set_N_flag(0)
     cpu.register['PC'] += 1
     cpu.clock.t += 8
 
-  #Add n to r
-  ADDrn: (cpu, r) ->
+  #Add n to A
+  ADDn: (cpu) ->
     n = cpu.MMU.read8(cpu.register['PC']+1)
-    val = cpu.register[r] + n
-    cpu.register.set_H_flag(half_carry_check8(n, cpu.register[r]))
+    val = cpu.register['A'] + n
+    cpu.register.set_H_flag(half_carry_check8(n, cpu.register['A']))
     cpu.register.set_C_flag(val > 0xFF)
     val &= 0xFF
-    cpu.register[r] = val
+    cpu.register['A'] = val
     cpu.register.set_Z_flag(!val)
     cpu.register.set_N_flag(0)
     cpu.register['PC'] += 2
@@ -1018,14 +1019,22 @@ opcodes = [
     helperOps.LDrr(cpu,'A', 'A')
 
   # 80
-  ADDr_b = (cpu) -> ,
-  ADDr_c = (cpu) -> ,
-  ADDr_d = (cpu) -> ,
-  ADDr_e = (cpu) -> ,
-  ADDr_h = (cpu) -> ,
-  ADDr_l = (cpu) -> ,
-  ADDHL = (cpu) -> ,
-  ADDr_a = (cpu) -> ,
+  ADDr_b = (cpu) ->
+    helperOps.ADD(cpu, 'B')
+  ADDr_c = (cpu) ->
+    helperOps.ADD(cpu, 'C')
+  ADDr_d = (cpu) ->
+    helperOps.ADD(cpu, 'D')
+  ADDr_e = (cpu) ->
+    helperOps.ADD(cpu, 'E')
+  ADDr_h = (cpu) ->
+    helperOps.ADD(cpu, 'H')
+  ADDr_l = (cpu) ->
+    helperOps.ADD(cpu, 'L')
+  ADDHL = (cpu) ->
+    helperOps.ADDHLm(cpu)
+  ADDr_a = (cpu) ->
+    helperOps.ADD(cpu, 'A')
   ADCr_b = (cpu) -> ,
   ADCr_c = (cpu) -> ,
   ADCr_d = (cpu) -> ,
@@ -1100,7 +1109,8 @@ opcodes = [
   CALLNZnn = (cpu) -> ,
   PUSHBC = (cpu) ->
     helperOps.PUSH(cpu, 'BC')
-  ADDn = (cpu) -> ,
+  ADDn = (cpu) ->
+    helperOps.ADDn(cpu)
   RST00 = (cpu) -> ,
   RETZ = (cpu) -> ,
   RET = (cpu) -> ,
