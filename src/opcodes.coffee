@@ -1,4 +1,4 @@
-class helperOps
+storeclass helperOps
 
   #16-bit n1, n2
   half_carry_check16: (n1, n2) ->
@@ -12,6 +12,13 @@ class helperOps
   toSigned: (n) ->
     if n > 127
       n = -((~n+1)&0xff)
+    else
+      n
+
+  #return n as unsigned
+  toUnsigned: (n) ->
+    if n < 0
+      n += 128
     else
       n
 
@@ -55,7 +62,7 @@ class helperOps
     cpu.register['PC'] += 1
     cpu.clock.t += 8
 
-  #Load (HL) with 8-bit operand n
+  #Load (HL) with 8-bit opertor n
   LDHLn: (cpu) ->
     n = cpu.MMU.read8(cpu.register['PC']+1)
     cpu.MMU.writeHL(n)
@@ -222,7 +229,7 @@ class helperOps
     cpu.clock.t += 4
 
   #Add (HL) to A
-  ADDrHLm: (cpu) ->
+  ADDHLm: (cpu) ->
     n = cpu.MMU.read8(cpu.register.readHL())
     val = cpu.register['A'] + n
     cpu.register.set_H_flag(half_carry_check8(n, cpu.register['A']))
@@ -247,9 +254,245 @@ class helperOps
     cpu.register['PC'] += 2
     cpu.clock.t += 8
 
+  #Add r+Cflag to A
+  ADC: (cpu, r) ->
+    val = cpu.register[r]
+    a = cpu.register['A']
+    cpu.set_H_flag(half_carry_check8(a, val))
+    new_a = a + val + (cpu.C_flag() << 8)
+    cpu.set_C_flag(new_a > 0xFF)
+    new_a &= 0xFF
+    cpu.set_Z_flag(!new_a)
+    cpu.set_N_flag(0)
+    cpu.register['A'] = new_a
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #Add r+Cflag to A
+  ADCHLm: (cpu) ->
+    val = cpu.MMU.read8(cpu.register['HL'])
+    a = cpu.register['A']
+    cpu.set_H_flag(half_carry_check8(a, val))
+    new_a = a + val + (cpu.C_flag() << 8)
+    cpu.set_C_flag(new_a > 0xFF)
+    new_a &= 0xFF
+    cpu.set_Z_flag(!new_a)
+    cpu.set_N_flag(0)
+    cpu.register['A'] = new_a
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Add r+Cflag to A
+  ADCn: (cpu) ->
+    val = cpu.MMU.read8(cpu.register['PC']+1)
+    a = register['A']
+    cpu.set_H_flag(half_carry_check8(a, val))
+    new_a = a + val + (cpu.C_flag() << 8)
+    cpu.set_C_flag(new_a > 0xFF)
+    new_a &= 0xFF
+    cpu.set_Z_flag(!new_a)
+    cpu.set_N_flag(0)
+    cpu.register['A'] = new_a
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  #Subtract r to A
+  SUB: (cpu, r) ->
+    n = cpu.register[r]
+    val = cpu.register['A'] - n
+    if val < 0
+      cpu.register.set_C_flag(1)
+      val += 256
+    else
+      cpu.register.set_C_flag(0)
+    cpu.register.set_H_flag((cpu.register['A'] & 0xf) - (n & 0xf) < 0)
+    cpu.register['A'] = val
+    cpu.register.set_Z_flag(!val)
+    cpu.register.set_N_flag(1)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #Subtract (HL) from A
+  SUBHLm: (cpu) ->
+    n = cpu.MMU.read8(cpu.register.readHL())
+    val = cpu.register['A'] - n
+    if val < 0
+      cpu.register.set_C_flag(1)
+      val += 256
+    else
+      cpu.register.set_C_flag(0)
+    cpu.register.set_H_flag((cpu.register['A'] & 0xf) - (n & 0xf) < 0)
+    cpu.register['A'] = val
+    cpu.register.set_Z_flag(!val)
+    cpu.register.set_N_flag(1)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Subtract n from A
+  SUBn: (cpu) ->
+    n = cpu.MMU.read8(cpu.register['PC']+1)
+    val = cpu.register['A'] - n
+    if val < 0
+      cpu.register.set_C_flag(1)
+      val += 256
+    else
+      cpu.register.set_C_flag(0)
+    cpu.register.set_H_flag((cpu.register['A'] & 0xf) - (n & 0xf) < 0)
+    cpu.register['A'] = val
+    cpu.register.set_Z_flag(!val)
+    cpu.register.set_N_flag(1)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  #Subtract r to A
+  SBC: (cpu, r) ->
+    n = cpu.register[r]
+    val = cpu.register['A'] - (n + cpu.register.C_flag())
+    if val < 0
+      cpu.register.set_C_flag(1)
+      val += 256
+    else
+      cpu.register.set_C_flag(0)
+    cpu.register.set_H_flag((cpu.register['A'] & 0xf) - (n & 0xf) - cpu.register.C_flag() < 0)
+    cpu.register['A'] = val
+    cpu.register.set_Z_flag(!val)
+    cpu.register.set_N_flag(1)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #Subtract (HL) from A
+  SBCHLm: (cpu) ->
+    n = cpu.MMU.read8(cpu.register.readHL())
+    val = cpu.register['A'] - (n + cpu.register.C_flag())
+    if val < 0
+      cpu.register.set_C_flag(1)
+      val += 256
+    else
+      cpu.register.set_C_flag(0)
+    cpu.register.set_H_flag((cpu.register['A'] & 0xf) - (n & 0xf) - cpu.register.C_flag() < 0)
+    cpu.register['A'] = val
+    cpu.register.set_Z_flag(!val)
+    cpu.register.set_N_flag(1)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #Subtract n from A
+  SBCn: (cpu) ->
+    n = cpu.MMU.read8(cpu.register['PC']+1)
+    val = cpu.register['A'] - (n + cpu.register.C_flag())
+    if val < 0
+      cpu.register.set_C_flag(1)
+      val += 256
+    else
+      cpu.register.set_C_flag(0)
+    cpu.register.set_H_flag((cpu.register['A'] & 0xf) - (n & 0xf) - cpu.register.C_flag() < 0)
+    cpu.register['A'] = val
+    cpu.register.set_Z_flag(!val)
+    cpu.register.set_N_flag(1)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  #AND A with r, store in A
+  AND: (cpu, r) ->
+    n = cpu.register[r]
+    cpu.register['A'] &= n
+    cpu.register.set_Z_flag(!cpu.register['A'])
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(1)
+    cpu.register.set_C_flag(0)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #AND A with (HL), store in A
+  ANDHLm: (cpu) ->
+    n = cpu.read8(cpu.register.readHL())
+    cpu.register['A'] &= n
+    cpu.register.set_Z_flag(!cpu.register['A'])
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(1)
+    cpu.register.set_C_flag(0)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #AND A with (HL), store in A
+  ANDn: (cpu) ->
+    n = cpu.read8(cpu.register['PC']+1)
+    cpu.register['A'] &= n
+    cpu.register.set_Z_flag(!cpu.register['A'])
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(1)
+    cpu.register.set_C_flag(0)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  #OR A with r, store in A
+  OR: (cpu, r) ->
+    n = cpu.register[r]
+    cpu.register['A'] |= n
+    cpu.register.set_Z_flag(!cpu.register['A'])
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(0)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #OR A with (HL), store in A
+  ORHLm: (cpu) ->
+    n = cpu.read8(cpu.register.readHL())
+    cpu.register['A'] |= n
+    cpu.register.set_Z_flag(!cpu.register['A'])
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(0)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #OR A with (HL), store in A
+  ORn: (cpu) ->
+    n = cpu.read8(cpu.register['PC']+1)
+    cpu.register['A'] |= n
+    cpu.register.set_Z_flag(!cpu.register['A'])
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(0)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
+
+  #XOR A with r, stXORe in A
+  XOR: (cpu, r) ->
+    n = cpu.register[r]
+    cpu.register['A'] |= n
+    cpu.register.set_Z_flag(!cpu.register['A'])
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(0)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 4
+
+  #XOR A with (HL), stXORe in A
+  XORHLm: (cpu) ->
+    n = cpu.read8(cpu.register.readHL())
+    cpu.register['A'] |= n
+    cpu.register.set_Z_flag(!cpu.register['A'])
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(0)
+    cpu.register['PC'] += 1
+    cpu.clock.t += 8
+
+  #XOR A with (HL), stXORe in A
+  XORn: (cpu) ->
+    n = cpu.read8(cpu.register['PC']+1)
+    cpu.register['A'] |= n
+    cpu.register.set_Z_flag(!cpu.register['A'])
+    cpu.register.set_N_flag(0)
+    cpu.register.set_H_flag(0)
+    cpu.register.set_C_flag(0)
+    cpu.register['PC'] += 2
+    cpu.clock.t += 8
 
   #=========================
-  #Inc and Decs
+  #Inc OR Decs
   #=========================
 
   #Increment register r
@@ -654,6 +897,10 @@ class helperOps
     cpu.register['PC'] += 2
     cpu.clock.t += 16
 
+  #=========================
+  #Jumps
+  #=========================
+
   #Jump to two-byte immediate
   JPnn: (cpu) ->
     loc = cpu.MMU.read16(cpu.register['PC'] + 1)
@@ -746,7 +993,11 @@ class helperOps
       cpu.register['PC'] += 2
     cpu.clock.t += 8
 
+  #============================
+  #Calls
+  #============================
 
+  
 
 opcodes = [
   #00
@@ -1035,68 +1286,140 @@ opcodes = [
     helperOps.ADDHLm(cpu)
   ADDr_a = (cpu) ->
     helperOps.ADD(cpu, 'A')
-  ADCr_b = (cpu) -> ,
-  ADCr_c = (cpu) -> ,
-  ADCr_d = (cpu) -> ,
-  ADCr_e = (cpu) -> ,
-  ADCr_h = (cpu) -> ,
-  ADCr_l = (cpu) -> ,
-  ADCHL = (cpu) -> ,
-  ADCr_a = (cpu) -> ,
+  ADCr_b = (cpu) ->
+    helperOps.ADC(cpu, 'B')
+  ADCr_c = (cpu) ->
+    helperOps.ADC(cpu, 'C')
+  ADCr_d = (cpu) ->
+    helperOps.ADC(cpu, 'D')
+  ADCr_e = (cpu) ->
+    helperOps.ADC(cpu, 'E')
+  ADCr_h = (cpu) ->
+    helperOps.ADC(cpu, 'H')
+  ADCr_l = (cpu) ->
+    helperOps.ADC(cpu, 'L')
+  ADCHL = (cpu) ->
+    helperOps.ADCHLm(cpu)
+  ADCr_a = (cpu) ->
+    helperOps.ADC(cpu, 'A')
 
   # 90
-  SUBr_b = (cpu) -> ,
-  SUBr_c = (cpu) -> ,
-  SUBr_d = (cpu) -> ,
-  SUBr_e = (cpu) -> ,
-  SUBr_h = (cpu) -> ,
-  SUBr_l = (cpu) -> ,
-  SUBHL = (cpu) -> ,
-  SUBr_a = (cpu) -> ,
-  SBCr_b = (cpu) -> ,
-  SBCr_c = (cpu) -> ,
-  SBCr_d = (cpu) -> ,
-  SBCr_e = (cpu) -> ,
-  SBCr_h = (cpu) -> ,
-  SBCr_l = (cpu) -> ,
-  SBCHL = (cpu) -> ,
-  SBCr_a = (cpu) -> ,
+  SUBr_b = (cpu) ->
+    helperOps.SUB(cpu, 'B')
+  SUBr_c = (cpu) ->
+    helperOps.SUB(cpu, 'C')
+  SUBr_d = (cpu) ->
+    helperOps.SUB(cpu, 'D')
+  SUBr_e = (cpu) ->
+    helperOps.SUB(cpu, 'E')
+  SUBr_h = (cpu) ->
+    helperOps.SUB(cpu, 'F')
+  SUBr_l = (cpu) ->
+    helperOps.SUB(cpu, 'L')
+  SUBHL = (cpu) ->
+    helperOps.SUBHLm(cpu)
+  SUBr_a = (cpu) ->
+    helperOps.SUB(cpu, 'A')
+  SBCr_b = (cpu) ->
+    helperOps.SBC(cpu, 'B')
+  SBCr_c = (cpu) ->
+    helperOps.SBC(cpu, 'C')
+  SBCr_d = (cpu) ->
+    helperOps.SBC(cpu, 'D')
+  SBCr_e = (cpu) ->
+    helperOps.SBC(cpu, 'E')
+  SBCr_h = (cpu) ->
+    helperOps.SBC(cpu, 'H')
+  SBCr_l = (cpu) ->
+    helperOps.SBC(cpu, 'L')
+  SBCHL = (cpu) ->
+    helperOps.SBCHLm(cpu)
+  SBCr_a = (cpu) ->
+    helperOps.SBC(cpu, 'A')
 
   # A0
-  ANDr_b = (cpu) -> ,
-  ANDr_c = (cpu) -> ,
-  ANDr_d = (cpu) -> ,
-  ANDr_e = (cpu) -> ,
-  ANDr_h = (cpu) -> ,
-  ANDr_l = (cpu) -> ,
-  ANDHL = (cpu) -> ,
-  ANDr_a = (cpu) -> ,
-  XORr_b = (cpu) -> ,
-  XORr_c = (cpu) -> ,
-  XORr_d = (cpu) -> ,
-  XORr_e = (cpu) -> ,
-  XORr_h = (cpu) -> ,
-  XORr_l = (cpu) -> ,
-  XORHL = (cpu) -> ,
-  XORr_a = (cpu) -> ,
+  ANDr_b = (cpu) ->
+    helperOps.AND(cpu, 'B')
+  ANDr_c = (cpu) ->
+    helperOps.AND(cpu, 'C')
+  ANDr_d = (cpu) ->
+    helperOps.AND(cpu, 'D')
+  ANDr_e = (cpu) ->
+    helperOps.AND(cpu, 'E')
+  ANDr_h = (cpu) ->
+    helperOps.AND(cpu, 'H')
+  ANDr_l = (cpu) ->
+    helperOps.AND(cpu, 'L')
+  ANDHL = (cpu) ->
+    helperOps.ANDHLm(cpu)
+  ANDr_a = (cpu) ->
+    helperOps.AND(cpu, 'A')
+  XORr_b = (cpu) ->
+    helperOps.XOR(cpu, 'B')
+  XORr_c = (cpu) ->
+    helperOps.XOR(cpu, 'C')
+  XORr_d = (cpu) ->
+    helperOps.XOR(cpu, 'D')
+  XORr_e = (cpu) ->
+    helperOps.XOR(cpu, 'E')
+  XORr_h = (cpu) ->
+    helperOps.XOR(cpu, 'H')
+  XORr_l = (cpu) ->
+    helperOps.XOR(cpu, 'L')
+  XORHL = (cpu) ->
+    helperOps.XORHLm(cpu)
+  XORr_a = (cpu) ->
+    helperOps.XOR(cpu, 'A')
 
   # B0
-  ORr_b = (cpu) -> ,
-  ORr_c = (cpu) -> ,
-  ORr_d = (cpu) -> ,
-  ORr_e = (cpu) -> ,
-  ORr_h = (cpu) -> ,
-  ORr_l = (cpu) -> ,
-  ORHL = (cpu) -> ,
-  ORr_a = (cpu) -> ,
-  CPr_b = (cpu) -> ,
-  CPr_c = (cpu) -> ,
-  CPr_d = (cpu) -> ,
-  CPr_e = (cpu) -> ,
-  CPr_h = (cpu) -> ,
-  CPr_l = (cpu) -> ,
-  CPHL = (cpu) -> ,
-  CPr_a = (cpu) -> ,
+  ORr_b = (cpu) ->
+    helperOps.OR(cpu, 'B')
+  ORr_c = (cpu) ->
+    helperOps.OR(cpu, 'C')
+  ORr_d = (cpu) ->
+    helperOps.OR(cpu, 'D')
+  ORr_e = (cpu) ->
+    helperOps.OR(cpu, 'E')
+  ORr_h = (cpu) ->
+    helperOps.OR(cpu, 'H')
+  ORr_l = (cpu) ->
+    helperOps.OR(cpu, 'L')
+  ORHL = (cpu) ->
+    helperOps.ORHLm(cpu)
+  ORr_a = (cpu) ->
+    helperOps.OR(cpu, 'A')
+  CPr_b = (cpu) ->
+    old_a = cpu.register['A']
+    helperOps.SUB(cpu, 'B')
+    cpu.register['A'] = old_a
+  CPr_c = (cpu) ->
+    old_a = cpu.register['A']
+    helperOps.SUB(cpu, 'C')
+    cpu.register['A'] = old_a
+  CPr_d = (cpu) ->
+    old_a = cpu.register['A']
+    helperOps.SUB(cpu, 'D')
+    cpu.register['A'] = old_a
+  CPr_e = (cpu) ->
+    old_a = cpu.register['A']
+    helperOps.SUB(cpu, 'E')
+    cpu.register['A'] = old_a
+  CPr_h = (cpu) ->
+    old_a = cpu.register['A']
+    helperOps.SUB(cpu, 'H')
+    cpu.register['A'] = old_a
+  CPr_l = (cpu) ->
+    old_a = cpu.register['A']
+    helperOps.SUB(cpu, 'L')
+    cpu.register['A'] = old_a
+  CPHL = (cpu) ->
+    old_a = cpu.register['A']
+    helperOps.SUBHLm(cpu)
+    cpu.register['A'] = old_a
+  CPr_a = (cpu) ->
+    old_a = cpu.register['A']
+    helperOps.SUB(cpu, 'A')
+    cpu.register['A'] = old_a
 
   # C0
   RETNZ = (cpu) -> ,
@@ -1119,7 +1442,8 @@ opcodes = [
   MAPcb = (cpu) -> ,
   CALLZnn = (cpu) -> ,
   CALLnn = (cpu) -> ,
-  ADCn = (cpu) -> ,
+  ADCn = (cpu) ->
+    helperOps.ADCn(cpu)
   RST08 = (cpu) -> ,
 
   # D0
@@ -1132,7 +1456,8 @@ opcodes = [
   CALLNCnn = (cpu) -> ,
   PUSHDE = (cpu) ->
     helperOps.PUSH(cpu, 'DE')
-  SUBn = (cpu) -> ,
+  SUBn = (cpu) ->
+    helperOps.SUBn(cpu)
   RST10 = (cpu) -> ,
   RETC = (cpu) -> ,
   RETI = (cpu) -> ,
@@ -1141,7 +1466,8 @@ opcodes = [
   XX = (cpu) -> ,
   CALLCnn = (cpu) -> ,
   XX = (cpu) -> ,
-  SBCn = (cpu) -> ,
+  SBCn = (cpu) ->
+    helperOps.SBCn(cpu)
   RST18 = (cpu) -> ,
 
   # E0
@@ -1155,7 +1481,8 @@ opcodes = [
   XX = (cpu) -> ,
   PUSHHL = (cpu) ->
     helperOps.PUSH(cpu, 'HL')
-  ANDn = (cpu) -> ,
+  ANDn = (cpu) ->
+    helperOps.ANDn(cpu)
   RST20 = (cpu) -> ,
   ADDSPn = (cpu) ->
     helperOps.ADDSPn(cpu)
@@ -1165,7 +1492,8 @@ opcodes = [
   XX = (cpu) -> ,
   XX = (cpu) -> ,
   XX = (cpu) -> ,
-  ORn = (cpu) -> ,
+  XORn = (cpu) ->
+    helperOps.XORn(cpu)
   RST28 = (cpu) -> ,
 
   # F0
@@ -1179,10 +1507,12 @@ opcodes = [
     cpu.interruptsEnabled = false
     cpu.register['PC'] += 1
     cpu.clock.t += 4
-  XX = (cpu) -> ,
+  XX = (cpu) ->
+    console.log("Invalid OPCODE 0xF4 at PC="+cpu.register['PC'])
   PUSHAF = (cpu) ->
     helperOps.PUSH(cpu, 'AF')
-  XORn = (cpu) -> ,
+  ORn = (cpu) ->
+    helperOps.ORn(cpu)
   RST30 = (cpu) -> ,
   LDHLSPn = (cpu) ->
     helperOps.LDHLSPn(cpu)
@@ -1193,8 +1523,13 @@ opcodes = [
     cpu.interruptsEnabled = true
     cpu.register['PC'] += 1
     cpu.clock.t += 4
-  XX = (cpu) -> ,
-  XX = (cpu) -> ,
-  CPn = (cpu) -> ,
+  XX = (cpu) ->
+    console.log("Invalid OPCODE 0xFC at PC="+cpu.register['PC'])
+  XX = (cpu) ->
+    console.log("Invalid OPCODE 0xFD at PC="+cpu.register['PC'])
+  CPn = (cpu) ->
+    old_a = cpu.register['A']
+    helperOps.SUBn(cpu)
+    cpu.register['A'] = old_a
   RST38= (cpu) ->
 ]
